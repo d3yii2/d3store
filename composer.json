@@ -1,0 +1,22 @@
+{
+    "name": "d3yii2/d3store",
+    "description": "Warehouse inventory",
+    "type": "library",
+    "keywords": ["yii2", "store", "warehouse", "inventory"],
+    "license": "BSD-4-Clause",
+    "authors": [
+        {
+            "name": "Uldis Nelsons",
+            "email": "uldis@weberp.lv"
+        }
+    ],
+    "homepage": "https://github.com/d3yii2/d3store",
+    "require": {
+        "yiisoft/yii2": "*",
+    },
+    "autoload": {
+        "psr-4": {
+            "d3yii2\\d3store\\": ""
+        }
+    }
+}
