@@ -12,7 +12,7 @@
     ],
     "homepage": "https://github.com/d3yii2/d3store",
     "require": {
-        "yiisoft/yii2": "*",
+        "yiisoft/yii2": "*"
     },
     "autoload": {
         "psr-4": {
