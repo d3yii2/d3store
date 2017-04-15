@@ -14,7 +14,7 @@ use Yii;
  * @property string $tran_time
  * @property integer $stack_from
  * @property integer $stack_to
- * @property string $quantaty
+ * @property string $quantity
  * @property string $remain_quantity
  * @property integer $ref_id
  * @property string $ref_record_id
@@ -53,11 +53,11 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['action', 'tran_time', 'quantaty', 'remain_quantity'], 'required'],
+            [['action', 'tran_time', 'quantity', 'remain_quantity'], 'required'],
             [['action'], 'string'],
             [['tran_time'], 'safe'],
             [['stack_from', 'stack_to', 'ref_id', 'ref_record_id'], 'integer'],
-            [['quantaty', 'remain_quantity'], 'number'],
+            [['quantity', 'remain_quantity'], 'number'],
             [['stack_from'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_from' => 'id']],
             [['stack_to'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_to' => 'id']],
             [['ref_id'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreRef::className(), 'targetAttribute' => ['ref_id' => 'id']],
@@ -81,8 +81,8 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
             'tran_time' => Yii::t('d3store', 'Time'),
             'stack_from' => Yii::t('d3store', 'From stack'),
             'stack_to' => Yii::t('d3store', 'To stack'),
-            'quantaty' => Yii::t('d3store', 'Quantaty'),
-            'remain_quantity' => Yii::t('d3store', 'Remain Quantaty'),
+            'quantity' => Yii::t('d3store', 'quantity'),
+            'remain_quantity' => Yii::t('d3store', 'Remain quantity'),
             'ref_id' => Yii::t('d3store', 'Refernce model'),
             'ref_record_id' => Yii::t('d3store', 'Reference model record'),
         ];

@@ -17,6 +17,7 @@ use d3yii2\d3store\models\StoreWoff;
 
 class CreateData
 {
+    public static $storeId;
     public static $stackToId;
     public static $stackFromId;
     public static $refLoadId;
@@ -28,6 +29,7 @@ class CreateData
         $store->name = 'TEST';
         $store->company_id = 777;
         $store->save();
+        self::$storeId = $store->id;
 
         $stack = new StoreStack();
         $stack->store_id = $store->id;
