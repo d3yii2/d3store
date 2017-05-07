@@ -132,11 +132,11 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     
     /**
      * @inheritdoc
-     * @return \coalmar\delivery\models\StoreTransactionsQuery the active query used by this AR class.
+     * @return \d3yii2\d3store\models\StoreTransactionsQuery the active query used by this AR class.
      */
     public static function find()
     {
-        return new \coalmar\delivery\models\StoreTransactionsQuery(get_called_class());
+        return new \d3yii2\d3store\models\StoreTransactionsQuery(get_called_class());
     }
 
 

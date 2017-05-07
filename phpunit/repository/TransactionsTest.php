@@ -19,25 +19,35 @@ class TransactionsTest extends TestCase
         $this->assertEquals(1000,$l1->quantity);
 
         $l2 = Transactions::load(new \DateTime(),2000,CreateData::$stackToId,CreateData::$refLoadId,778);
-        $this->assertEquals(2000,$l2->quantity);
 
-        $u1 = Transactions::unLoadFifo(new \DateTime(),1500,CreateData::$stackToId,CreateData::$refUnLoadId,1);
-        $this->assertEquals(1500,$u1->quantity);
+        $balance = Transactions::getStackBalance(CreateData::$stackToId, CreateData::$refLoadId,778);
+        $this->assertEquals(2000,$balance);
 
-        $balance = Transactions::getStackBalance(CreateData::$stackToId);
-        $this->assertEquals(1500,$balance);
+        $u1 = Transactions::unLoadFifo(new \DateTime(),50000,CreateData::$stackToId,CreateData::$refUnLoadId,1);
+        $this->assertFalse($u1);
 
         $u1 = Transactions::unLoadFifo(new \DateTime(),500,CreateData::$stackToId,CreateData::$refUnLoadId,1);
         $this->assertEquals(500,$u1->quantity);
 
+        $balance = Transactions::getStackBalance(CreateData::$stackToId, CreateData::$refLoadId,777);
+        $this->assertEquals(500,$balance);
+
         $balance = Transactions::getStackBalance(CreateData::$stackToId);
-        $this->assertEquals(1000,$balance);
+        $this->assertEquals(2500,$balance);
+
+        $u1 = Transactions::unLoadFifo(new \DateTime(),500,CreateData::$stackToId,CreateData::$refUnLoadId,1,CreateData::$refLoadId,778);
+
+        $balance = Transactions::getStackBalance(CreateData::$stackToId);
+        $this->assertEquals(2000,$balance);
+
+        $balance = Transactions::getStackBalance(CreateData::$stackToId, CreateData::$refLoadId,778);
+        $this->assertEquals(1500,$balance);
 
         $r = Transactions::moveFifo(new \DateTime(),200,CreateData::$stackToId,CreateData::$stackFromId);
         $this->assertTrue($r);
 
         $balanceTo = Transactions::getStackBalance(CreateData::$stackToId);
-        $this->assertEquals(800,$balanceTo);
+        $this->assertEquals(1800,$balanceTo);
 
         $balance = Transactions::getStackBalance(CreateData::$stackFromId);
 
@@ -52,17 +62,15 @@ class TransactionsTest extends TestCase
         $allBalances = Transactions::getAllStacksBalance(CreateData::$storeId);
 
         foreach($allBalances as $b){
-            if($b['stack_id'] == CreateData::$stackFromId){
+            if($b['id'] == CreateData::$stackFromId){
                 $this->assertEquals($balanceFrom,$b['remain_quantity']);
                 continue;
             }
-            if($b['stack_id'] == CreateData::$stackToId){
+            if($b['id'] == CreateData::$stackToId){
                 $this->assertEquals($balanceTo,$b['remain_quantity']);
                 continue;
             }
         }
-
-        exit;
 
     }
     public static function tearDownAfterClass()

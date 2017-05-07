@@ -79,11 +79,11 @@ abstract class StoreWoff extends \yii\db\ActiveRecord
     
     /**
      * @inheritdoc
-     * @return \coalmar\delivery\models\StoreWoffQuery the active query used by this AR class.
+     * @return \d3yii2\d3store\models\StoreWoffQuery the active query used by this AR class.
      */
     public static function find()
     {
-        return new \coalmar\delivery\models\StoreWoffQuery(get_called_class());
+        return new \d3yii2\d3store\models\StoreWoffQuery(get_called_class());
     }
 
 
