@@ -89,7 +89,6 @@ class Transactions
     {
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
         if($stackBalance < $quantity){
-            dump($stackBalance .'/'. $quantity);
             return false;
         }
         $transaction = new StoreTransactions();
