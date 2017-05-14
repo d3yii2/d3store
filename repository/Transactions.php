@@ -253,4 +253,28 @@ class Transactions
             ->asArray()
             ->all();
     }
+
+    public static function deleteUnload($unLoadTranId)
+    {
+        $unloadTransaction = StoreTransactions::findOne($unLoadTranId);
+
+        //  $unloadTransaction->getStoreWoffs0()->all()
+        /** @var StoreWoff $woff */
+        foreach(StoreWoff::findAll(['unload_tran_id' => $unLoadTranId]) as $woff){
+            /** @var StoreTransactions $loadTran */
+            $loadTran = $woff->getLoadTran()->one();
+            $loadTran->remain_quantity += $woff->quantity;
+            if(!$loadTran->save()){
+                throw new \Exception('Errror:' . json_encode($loadTran->getErrors()));
+            }
+            if(!$woff->delete()){
+                throw new \Exception('Errror:' . json_encode($woff->getErrors()));
+            }
+        }
+
+        if(!($unloadTransaction->delete())){
+            throw new \Exception('Errror:' . json_encode($unloadTransaction->getErrors()));
+        }
+
+    }
 }
