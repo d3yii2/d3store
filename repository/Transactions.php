@@ -254,15 +254,21 @@ class Transactions
             ->all();
     }
 
+    /**
+     * @param int $unLoadTranId
+     * @return int[] array
+     * @throws \Exception
+     */
     public static function deleteUnload($unLoadTranId)
     {
         $unloadTransaction = StoreTransactions::findOne($unLoadTranId);
 
-        //  $unloadTransaction->getStoreWoffs0()->all()
+        $loadTranIdList = [];
         /** @var StoreWoff $woff */
         foreach(StoreWoff::findAll(['unload_tran_id' => $unLoadTranId]) as $woff){
             /** @var StoreTransactions $loadTran */
             $loadTran = $woff->getLoadTran()->one();
+            $loadTranIdList[] = $loadTran->id;
             $loadTran->remain_quantity += $woff->quantity;
             if(!$loadTran->save()){
                 throw new \Exception('Errror:' . json_encode($loadTran->getErrors()));
@@ -275,6 +281,8 @@ class Transactions
         if(!($unloadTransaction->delete())){
             throw new \Exception('Errror:' . json_encode($unloadTransaction->getErrors()));
         }
+
+        return $loadTranIdList;
 
     }
 }
