@@ -235,7 +235,7 @@ class Transactions
      * @param int $storeId
      * @return array
      */
-    public static function getAllStacksBalance($storeId)
+    public static function getAllStacksBalance()
     {
         return StoreTransactions::find()
             ->select([
@@ -248,7 +248,11 @@ class Transactions
                 'sum(remain_quantity) remain_quantity'
             ])
             ->innerJoin('`store_stack`', '`store_stack`.id = store_transactions.stack_to')
-            ->where(['store_id' => $storeId,'active' => 1])
+            ->innerJoin('`store_store`', 'store_store.id = `store_stack`.store_id')
+            ->where([
+                'store_store.company_id' => \Yii::$app->SysCmp->getActiveCompanyId(),
+                'store_stack.active' => 1
+            ])
             ->groupBy('`store_stack`.id')
             ->asArray()
             ->all();
