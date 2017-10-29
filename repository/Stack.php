@@ -21,8 +21,13 @@ class Stack
             $conditions['active'] = 1;
         }
         $stocks = StoreStack::find()
+            ->select([
+                'store_stack.id',
+                'concat(store.name, " - ", store_stack.name) name'
+            ])
+            ->innerJoin('store_store store','store.id = store_stack.store_id')
             ->where(['store_id' => $stackId])
-            ->orderBy('name')
+            ->orderBy('store.name, store_stack.name')
             ->all();
         return ArrayHelper::map($stocks, 'id', 'name');
     }
