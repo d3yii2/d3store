@@ -289,4 +289,40 @@ class Transactions
         return $loadTranIdList;
 
     }
+
+    /**
+     * @param int $refId
+     * @param int $refRecordId
+     * @return StoreTransactions[]
+     */
+    public static  function getLoadTran(int $refId, int $refRecordId): array
+    {
+        return StoreTransactions::findAll([
+            'action' => StoreTransactions::ACTION_LOAD,
+            'ref_id' => $refId,
+            'ref_record_id' => $refRecordId
+        ]);
+    }
+
+    /**
+     * @param int $refId
+     * @param int $refRecordId
+     * @return StoreTransactions[]
+     */
+    public static  function getUnLoadTran(int $refId, int $refRecordId): array
+    {
+        return StoreTransactions::find()
+            ->select([
+                'ut.*'
+            ])
+            ->innerJoin('store_woff', 'store_transactions.id = store_woff.load_tran_id')
+            ->innerJoin('store_transactions AS ut', 'store_woff.unload_tran_id = ut.id')
+            ->andWhere
+            ([
+                'store_transactions.action' => StoreTransactions::ACTION_LOAD,
+                'store_transactions.ref_id' => $refId,
+                'store_transactions.ref_record_id' => $refRecordId
+            ])
+            ->all();
+    }
 }
