@@ -37,6 +37,26 @@ class Transactions
 
     }
 
+    public static function deleteLoad($refId, $refRecordId)
+    {
+        $tran = StoreTransactions::findOne([
+            'action' => StoreTransactions::ACTION_LOAD,
+            'ref_id' => $refId,
+            'ref_record_id' =>  $refRecordId,
+        ]);
+
+        if($tran->getStoreWoffs()->one()){
+            throw new \Exception('Can not delete transactin. Transaction has write off');
+        }
+
+        if(!$tran->delete()){
+            throw new \Exception('Can not delete transactin.' . json_encode($tran->getErrors()));
+        }
+
+        return true;
+
+    }
+
     /**
      * @param \DateTime $tranTime
      * @param int $quantity
