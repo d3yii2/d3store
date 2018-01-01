@@ -14,9 +14,9 @@ use yii\helpers\ArrayHelper;
 
 class Stack
 {
-    public static function getList($stackId, $full = true)
+    public static function getList(int $storeId, $full = true)
     {
-        $conditions = ['store_id' => $stackId];
+        $conditions = ['store_id' => $storeId];
         if(!$full){
             $conditions['active'] = 1;
         }
@@ -26,7 +26,7 @@ class Stack
                 'concat(store.name, " - ", store_stack.name) name'
             ])
             ->innerJoin('store_store store','store.id = store_stack.store_id')
-            ->where(['store_id' => $stackId])
+            ->where(['store_id' => $storeId])
             ->orderBy('store.name, store_stack.name')
             ->all();
         return ArrayHelper::map($stocks, 'id', 'name');

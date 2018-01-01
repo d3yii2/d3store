@@ -146,38 +146,66 @@ class Transactions
             ->all();
         $moveQuantity = $quantity;
         foreach ($remainTran as $rT) {
-
-            $transaction = new StoreTransactions();
-            $transaction->action = StoreTransactions::ACTION_MOVE;
-            $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
-            $transaction->remain_quantity = $quantity;
-            $transaction->stack_from = $stackFromId;
-            $transaction->stack_to = $stackToId;
-            $transaction->ref_id = $rT->ref_id;
-            $transaction->ref_record_id = $rT->ref_record_id;
-
-            if ($moveQuantity > $rT->remain_quantity) {
-                $moveQuantity -= $rT->remain_quantity;
-                $transaction->quantity = $rT->remain_quantity;
-                $transaction->remain_quantity = $rT->remain_quantity;
-                $rT->remain_quantity = 0;
-            } else {
-                $rT->remain_quantity -= $moveQuantity;
-                $transaction->quantity = $moveQuantity;
-                $moveQuantity = 0;
+            $tranQuantity = $rT->remain_quantity;
+            if($tranQuantity > $moveQuantity){
+                $tranQuantity = $moveQuantity;
             }
-            if (!$rT->save()) {
-                throw new \Exception('Error:' . json_encode($rT->errors));
-            }
-            if (!$transaction->save()) {
-                throw new \Exception('Error:' . json_encode($transaction->errors));
-            }
+            $moveQuantity -= $tranQuantity;
+            self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity);
             if (0 === $moveQuantity) {
                 break;
             }
         }
         return true;
 
+    }
+
+    /**
+     * @param \DateTime $tranTime
+     * @param int $stackToId
+     * @param StoreTransactions $rT
+     * @param float $tranQuantity
+     * @param int $refId
+     * @param int $refRecordId
+     * @return StoreTransactions
+     * @throws \Exception
+     */
+    public static function moveTransaction(
+        \DateTime $tranTime,
+        int $stackToId,
+        StoreTransactions $rT,
+        float $tranQuantity,
+        int $refId = 0,
+        int $refRecordId = 0
+    ): StoreTransactions
+    {
+        if(!$refId){
+            $refId = $rT->ref_id;
+        }
+
+        if(!$refRecordId){
+            $refRecordId = $rT->ref_record_id;
+        }
+
+        $transaction = new StoreTransactions();
+        $transaction->action = StoreTransactions::ACTION_MOVE;
+        $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
+        $transaction->stack_from = $rT->stack_to;
+        $transaction->stack_to = $stackToId;
+        $transaction->ref_id = $refId;
+        $transaction->ref_record_id = $refRecordId;
+        $transaction->quantity = $tranQuantity;
+        $transaction->remain_quantity = $tranQuantity;
+
+        $rT->remain_quantity -= $tranQuantity;
+
+        if (!$rT->save()) {
+            throw new \Exception('Error:' . json_encode($rT->errors));
+        }
+        if (!$transaction->save()) {
+            throw new \Exception('Error:' . json_encode($transaction->errors));
+        }
+        return $transaction;
     }
 
     /**
@@ -345,4 +373,6 @@ class Transactions
             ])
             ->all();
     }
+
+
 }
