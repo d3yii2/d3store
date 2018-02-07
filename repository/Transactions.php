@@ -152,7 +152,7 @@ class Transactions
             }
             $moveQuantity -= $tranQuantity;
             self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity);
-            if (0 === $moveQuantity) {
+            if ($moveQuantity < $quantity/1000000000) {
                 break;
             }
         }
@@ -253,7 +253,7 @@ class Transactions
             if (!$rT->save()) {
                 throw new \Exception('Error:' . json_encode($rT->errors));
             }
-            if (0 === $woffQuantity) {
+            if ($woffQuantity < $transaction->quantity/1000000000) {
                 break;
             }
         }
