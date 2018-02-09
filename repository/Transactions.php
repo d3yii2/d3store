@@ -8,6 +8,7 @@ use d3yii2\d3store\models\StoreWoff;
 
 class Transactions
 {
+    public static $errors = [];
 
     /**
      * @param \DateTime $tranTime
@@ -70,6 +71,7 @@ class Transactions
      */
     public static function unLoadFifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
     {
+        self::clearError();
         if(!$transaction = self::unLoad($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId, $loadRefRecordIdList)){
             return false;
         }
@@ -89,6 +91,7 @@ class Transactions
      */
     public static function unLoadLifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
     {
+        self::clearError();
         if(!$transaction = self::unLoad($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId, $loadRefRecordIdList)){
             return false;
         }
@@ -108,7 +111,8 @@ class Transactions
     private static function unLoad($tranTime, $quantity, $stackFromId, $refId,$refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
     {
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
-        if($stackBalance < $quantity){
+        if(round($stackBalance,5) < round($quantity,5)){
+            self::registreError('No enough unload quantaty','stackBalance='.round($stackBalance,5).'; $quantity='. round($quantity,5));
             return false;
         }
         $transaction = new StoreTransactions();
@@ -266,7 +270,7 @@ class Transactions
      * @param int $stackId
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
-     * @return array
+     * @return float
      */
     public static function getStackBalance($stackId, $loadRefId = false, $loadRefRecordIdList = [])
     {
@@ -374,5 +378,20 @@ class Transactions
             ->all();
     }
 
+    private static function clearError(){
+        self::$errors = [];
+    }
+    private static function registreError(string $message,$data)
+    {
+        self::$errors[] = [
+            'message' => $message,
+            'data' => $data
+        ];
+    }
+
+    public static function getErrors()
+    {
+        return self::$errors;
+    }
 
 }
