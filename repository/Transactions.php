@@ -367,6 +367,20 @@ class Transactions
      * @param int $refRecordId
      * @return StoreTransactions[]
      */
+    public static  function getMoveTran(int $refId, int $refRecordId): array
+    {
+        return StoreTransactions::findAll([
+            'action' => StoreTransactions::ACTION_MOVE,
+            'ref_id' => $refId,
+            'ref_record_id' => $refRecordId
+        ]);
+    }
+
+    /**
+     * @param int $refId
+     * @param int $refRecordId
+     * @return StoreTransactions[]
+     */
     public static  function getUnLoadTran(int $refId, int $refRecordId): array
     {
         return StoreTransactions::find()
