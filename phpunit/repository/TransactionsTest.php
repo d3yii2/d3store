@@ -27,7 +27,7 @@ class TransactionsTest extends TestCase
         $this->assertFalse($u1);
 
         $u1 = Transactions::unLoadFifo(new \DateTime(),500,CreateData::$stackToId,CreateData::$refUnLoadId,1);
-        $this->assertEquals(500,$u1->quantity);
+        $this->assertEquals(500,$u1[0]->quantity);
 
         $balance = Transactions::getStackBalance(CreateData::$stackToId, CreateData::$refLoadId,777);
         $this->assertEquals(500,$balance);
@@ -54,7 +54,7 @@ class TransactionsTest extends TestCase
         $this->assertEquals(200,$balance);
 
         $uSt2 = Transactions::unLoadFifo(new \DateTime(),100,CreateData::$stackFromId,CreateData::$refUnLoadId,2);
-        $this->assertEquals(100,$uSt2->quantity);
+        $this->assertEquals(100,$uSt2[0]->quantity);
 
         $balanceFrom = Transactions::getStackBalance(CreateData::$stackFromId);
         $this->assertEquals(100,$balanceFrom);

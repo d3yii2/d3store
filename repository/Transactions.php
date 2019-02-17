@@ -4,6 +4,8 @@ namespace d3yii2\d3store\repository;
 
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
+use yii\base\Exception;
+use yii\helpers\VarDumper;
 
 
 class Transactions
@@ -31,27 +33,31 @@ class Transactions
         $transaction->ref_record_id = $refRecordId;
 
         if (!$transaction->save()) {
-            throw new \Exception('Error:' . json_encode($transaction->errors));
+            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
         }
 
         return $transaction;
 
     }
 
-    public static function deleteLoad($refId, $refRecordId)
+    public static function deleteLoad($refId, $refRecordId): bool
     {
-        $tran = StoreTransactions::findOne([
+        $searchParam = [
             'action' => StoreTransactions::ACTION_LOAD,
             'ref_id' => $refId,
             'ref_record_id' =>  $refRecordId,
-        ]);
+        ];
+        $tran = StoreTransactions::findOne($searchParam);
 
+        if(!$tran){
+            throw new Exception('Can not find transactin. ' . VarDumper::dumpAsString($searchParam));
+        }
         if($tran->getStoreWoffs()->one()){
-            throw new \Exception('Can not delete transactin. Transaction has write off');
+            throw new Exception('Can not delete transactin. Transaction has write off');
         }
 
         if(!$tran->delete()){
-            throw new \Exception('Can not delete transactin.' . json_encode($tran->getErrors()));
+            throw new Exception('Can not delete transactin.' . VarDumper::dumpAsString($tran->getErrors()));
         }
 
         return true;
@@ -72,11 +78,20 @@ class Transactions
     public static function unLoadFifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
     {
         self::clearError();
-        if(!$transaction = self::unLoad($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId, $loadRefRecordIdList)){
+        $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
+        if(round($stackBalance,5) < round($quantity,5)){
+            self::registreError('No enough unload quantaty',[
+                'stackBalance' => round($stackBalance,5),
+                'quantity' => round($quantity,5),
+                'stackFromId' => $stackFromId,
+                'loadRefId' => $loadRefId,
+                'loadRefRecordIdList' => $loadRefRecordIdList
+            ]);
             return false;
         }
-        self::writeOff($transaction,'fifo', $loadRefId, $loadRefRecordIdList);
-        return $transaction;
+
+        return self::writeOff('fifo', $loadRefId, $loadRefRecordIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
+
     }
 
     /**
@@ -92,24 +107,6 @@ class Transactions
     public static function unLoadLifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
     {
         self::clearError();
-        if(!$transaction = self::unLoad($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId, $loadRefRecordIdList)){
-            return false;
-        }
-        self::writeOff($transaction,'lifo', $loadRefId, $loadRefRecordIdList);
-        return $transaction;
-    }
-
-    /**
-     * @param \DateTime $tranTime
-     * @param $quantity
-     * @param $stackFromId
-     * @param $refId
-     * @param $refRecordId
-     * @return StoreTransactions|bool
-     * @throws \Exception
-     */
-    private static function unLoad($tranTime, $quantity, $stackFromId, $refId,$refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
-    {
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
         if(round($stackBalance,5) < round($quantity,5)){
             self::registreError('No enough unload quantaty',[
@@ -121,21 +118,7 @@ class Transactions
             ]);
             return false;
         }
-        $transaction = new StoreTransactions();
-        $transaction->action = StoreTransactions::ACTION_UNLOAD;
-        $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
-        $transaction->quantity = $quantity;
-        $transaction->remain_quantity = 0;
-        $transaction->stack_from = $stackFromId;
-        $transaction->ref_id = $refId;
-        $transaction->ref_record_id = $refRecordId;
-
-        if (!$transaction->save()) {
-            throw new \Exception('Error:' . json_encode($transaction->errors));
-        }
-
-        return $transaction;
-
+        return self::writeOff('lifo', $loadRefId, $loadRefRecordIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
     }
 
     /**
@@ -210,29 +193,42 @@ class Transactions
         $rT->remain_quantity -= $tranQuantity;
 
         if (!$rT->save()) {
-            throw new \Exception('Error:' . json_encode($rT->errors));
+            throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
         }
         if (!$transaction->save()) {
-            throw new \Exception('Error:' . json_encode($transaction->errors));
+            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
         }
         return $transaction;
     }
 
     /**
-     * @param StoreTransactions $transaction
-     * @param string $type
+     * @param string $type FIFO or ???
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
-     * @return bool
+     * @param \DateTime $tranTime
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $refId
+     * @param int $refRecordId
+     * @return bool|Transactions[]
      * @throws \Exception
      */
-    private static function writeOff($transaction, $type, $loadRefId = false, $loadRefRecordIdList = [])
+    private static function writeOff(
+        string $type,
+        int $loadRefId,
+        array $loadRefRecordIdList,
+        \DateTime $tranTime,
+        float $quantity,
+        int $stackFromId,
+        int $refId,
+        int $refRecordId
+    )
     {
 
-        $sortDirection = $type === 'fifo' ? SORT_DESC : SORT_ASC;
+        $sortDirection = ($type === 'fifo' ? SORT_ASC : SORT_DESC);
 
         $query = StoreTransactions::find()
-            ->where(['stack_to' => $transaction->stack_from])
+            ->where(['stack_to' => $stackFromId])
             ->andFilterCompare('remain_quantity', 0, '>')
             ->orderBy(['tran_time' => $sortDirection]);
         if($loadRefId){
@@ -242,33 +238,50 @@ class Transactions
 
         $remainTran = $query->all();
 
-        $woffQuantity = $transaction->quantity;
+        $woffQuantity = $quantity;
+        $transactionList = [];
         foreach ($remainTran as $rT) {
-            $woff = new StoreWoff();
-            $woff->unload_tran_id = $transaction->id;
-            $woff->load_tran_id = $rT->id;
+
             if ($woffQuantity > $rT->remain_quantity) {
                 $woffQuantity -= $rT->remain_quantity;
-                $woff->quantity = $rT->remain_quantity;
+                $tranQuantity = $rT->remain_quantity;
                 $rT->remain_quantity = 0;
             } else {
                 $rT->remain_quantity -= $woffQuantity;
-                $woff->quantity = $woffQuantity;
+                $tranQuantity = $woffQuantity;
                 $woffQuantity = 0;
             }
 
+            $transaction = new StoreTransactions();
+            $transaction->action = StoreTransactions::ACTION_UNLOAD;
+            $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
+            $transaction->quantity = $tranQuantity;
+            $transaction->remain_quantity = 0;
+            $transaction->stack_from = $stackFromId;
+            $transaction->ref_id = $refId;
+            $transaction->ref_record_id = $refRecordId;
+
+            if (!$transaction->save()) {
+                throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+            }
+            $transactionList[] = $transaction;
+            $woff = new StoreWoff();
+            $woff->unload_tran_id = $transaction->id;
+            $woff->load_tran_id = $rT->id;
+            $woff->quantity = $tranQuantity;
+
             if (!$woff->save()) {
-                throw new \Exception('Error:' . json_encode($woff->errors));
+                throw new Exception('Error:' . VarDumper::dumpAsString($woff->errors));
             }
             if (!$rT->save()) {
-                throw new \Exception('Error:' . json_encode($rT->errors));
+                throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
             }
             if ($woffQuantity < $transaction->quantity/1000000000) {
                 break;
             }
         }
 
-        return true;
+        return $transactionList;
 
     }
 
@@ -333,15 +346,15 @@ class Transactions
             $loadTranIdList[] = $loadTran->id;
             $loadTran->remain_quantity += $woff->quantity;
             if(!$loadTran->save()){
-                throw new \Exception('Errror:' . json_encode($loadTran->getErrors()));
+                throw new Exception('Errror:' . VarDumper::dumpAsString($loadTran->getErrors()));
             }
             if(!$woff->delete()){
-                throw new \Exception('Errror:' . json_encode($woff->getErrors()));
+                throw new Exception('Errror:' . VarDumper::dumpAsString($woff->getErrors()));
             }
         }
 
         if(!($unloadTransaction->delete())){
-            throw new \Exception('Errror:' . json_encode($unloadTransaction->getErrors()));
+            throw new \Exception('Errror:' . VarDumper::dumpAsString($unloadTransaction->getErrors()));
         }
 
         return $loadTranIdList;
