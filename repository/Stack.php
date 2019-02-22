@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Uldis
- * Date: 2017.05.16.
- * Time: 5:20
- */
 
 namespace d3yii2\d3store\repository;
 
@@ -20,7 +14,7 @@ class Stack
             'store_id' => $storeId
         ];
         if(!$full){
-            $conditions['active'] = 1;
+            $conditions['store_stack.active'] = 1;
         }
         $stocks = StoreStack::find()
             ->select([
