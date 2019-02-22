@@ -16,7 +16,9 @@ class Stack
 {
     public static function getList(int $storeId, $full = true)
     {
-        $conditions = ['store_id' => $storeId];
+        $conditions = [
+            'store_id' => $storeId
+        ];
         if(!$full){
             $conditions['active'] = 1;
         }
@@ -26,7 +28,7 @@ class Stack
                 'concat(store.name, " - ", store_stack.name) name'
             ])
             ->innerJoin('store_store store','store.id = store_stack.store_id')
-            ->where(['store_id' => $storeId])
+            ->where($conditions)
             ->orderBy('store.name, store_stack.name')
             ->all();
         return ArrayHelper::map($stocks, 'id', 'name');
