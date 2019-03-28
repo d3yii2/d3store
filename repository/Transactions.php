@@ -2,6 +2,7 @@
 
 namespace d3yii2\d3store\repository;
 
+use d3yii2\d3store\models\StoreTransactionFlow;
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
 use yii\base\Exception;
@@ -80,7 +81,7 @@ class Transactions
         self::clearError();
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
         if(round($stackBalance,5) < round($quantity,5)){
-            self::registreError('No enough unload quantaty',[
+            self::registreError('No enough unload quantity',[
                 'stackBalance' => round($stackBalance,5),
                 'quantity' => round($quantity,5),
                 'stackFromId' => $stackFromId,
@@ -123,28 +124,97 @@ class Transactions
 
     /**
      * @param \DateTime $tranTime
-     * @param $quantity
-     * @param $stackFromId
-     * @param $stackToId
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $stackToId
+     * @param int $addRefId
+     * @param int $addRefRecordId
+     * @param int $loadRefId
+     * @param array $loadRefRecordIdList
      * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
-    public static function moveFifo($tranTime, $quantity, $stackFromId, $stackToId)
+    public static function moveFifo(
+        \DateTime $tranTime,
+        float $quantity,
+        int $stackFromId,
+        int $stackToId,
+        int $addRefId = 0,
+        int $addRefRecordId = 0,
+        int $loadRefId = 0,
+        array $loadRefRecordIdList = []
+    ): bool
     {
+        self::clearError();
 
-        $remainTran = StoreTransactions::find()
+        /**
+         * checking or getting enough
+         */
+        $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
+        if (round($stackBalance, 5) < round($quantity, 5)) {
+            self::registreError('No enough unload quantity', [
+                'stackBalance' => round($stackBalance, 5),
+                'quantity' => round($quantity, 5),
+                'stackFromId' => $stackFromId,
+                'loadRefId' => $loadRefId,
+                'loadRefRecordIdList' => $loadRefRecordIdList
+            ]);
+            return false;
+        }
+
+        /**
+         * get remain transactions sorted by transaction time
+         */
+        $query = StoreTransactions::find()
             ->where(['stack_to' => $stackFromId])
             ->andFilterCompare('remain_quantity', 0, '>')
-            ->orderBy(['tran_time' => SORT_DESC])
-            ->all();
-        $moveQuantity = $quantity;
-        foreach ($remainTran as $rT) {
-            $tranQuantity = $rT->remain_quantity;
-            if($tranQuantity > $moveQuantity){
-                $tranQuantity = $moveQuantity;
+            ->orderBy(['tran_time' => SORT_DESC]);
+        if($loadRefId){
+            $query->andWhere(['ref_id' => $loadRefId])
+                ->andWhere(['ref_record_id' => $loadRefRecordIdList]);
+        }
+        $remainTran = $query->all();
+
+        /**
+         * extra sorting for more one level moving
+         */
+        $SortedRemainTran = [];
+        foreach ($remainTran as $k =>$tran){
+
+            $prevTran = clone $tran;
+            while($prevTran->action !== StoreTransactions::ACTION_LOAD){
+                /** @var StoreTransactionFlow $flow */
+                if(!$flow = $prevTran->getStoreTransactionFlowsNext()->one()){
+                    throw new Exception('Ca not found flow for StoreTransactions: ' . VarDumper::dumpAsString($prevTran->attributes()));
+                }
+                if(!$prevTran = $flow->getPrevTran()->one()){
+                    throw new Exception('Ca not found prev transaction for StoreTransactionFlow=' . VarDumper::dumpAsString($flow->attributes()));
+                }
             }
-            $moveQuantity -= $tranQuantity;
-            self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity);
+
+            $key = $prevTran->tran_time . $tran->id;
+            $SortedRemainTran[$key] = $tran;
+            unset($remainTran[$k]);
+        }
+
+        ksort($SortedRemainTran);
+
+        /**
+         * registering move transactions and reduce common move quantity while is not empty
+         */
+        $moveQuantity = $quantity;
+        foreach ($SortedRemainTran as $rT) {
+
+            if ($moveQuantity > $rT->remain_quantity) {
+                $moveQuantity -= $rT->remain_quantity;
+                $tranQuantity = $rT->remain_quantity;
+            } else {
+                $tranQuantity = $moveQuantity;
+                $moveQuantity = 0;
+            }
+
+            self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity,$addRefId,$addRefRecordId);
+
             if ($moveQuantity < $quantity/1000000000) {
                 break;
             }
@@ -153,50 +223,86 @@ class Transactions
 
     }
 
+    public static function deleteMoveTransaction(int $reId, int $refRecordId): void
+    {
+        foreach(StoreTransactions::findAll(['add_ref_id'=>$reId,'add_ref_record_id' => $refRecordId]) as $moveTran){
+            if(!$tranFlow = StoreTransactionFlow::findOne(['next_tran_id' => $moveTran->id])){
+                throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
+            }
+            if(!$prevTran = StoreTransactions::findOne(['id' => $tranFlow->prev_tran_id])){
+                throw new Exception('Can not found Prev Tran for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
+            }
+            $prevTran->remain_quantity += (float)$tranFlow->quantity;
+            $prevTran->save();
+            $tranFlow->delete();
+            $moveTran->delete();
+        }
+    }
+
     /**
+     * create store transaction, reducing remain in prev transaction and register  flow
+     *
      * @param \DateTime $tranTime
      * @param int $stackToId
      * @param StoreTransactions $rT
      * @param float $tranQuantity
-     * @param int $refId
-     * @param int $refRecordId
+     * @param int $addRefId
+     * @param int $addRefRecordId
      * @return StoreTransactions
-     * @throws \Exception
+     * @throws Exception
      */
     public static function moveTransaction(
         \DateTime $tranTime,
         int $stackToId,
         StoreTransactions $rT,
         float $tranQuantity,
-        int $refId = 0,
-        int $refRecordId = 0
+        int $addRefId = 0,
+        int $addRefRecordId = 0
     ): StoreTransactions
     {
-        if(!$refId){
-            $refId = $rT->ref_id;
-        }
 
-        if(!$refRecordId){
-            $refRecordId = $rT->ref_record_id;
-        }
-
+        /**
+         * move transaction
+         */
         $transaction = new StoreTransactions();
         $transaction->action = StoreTransactions::ACTION_MOVE;
         $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
         $transaction->stack_from = $rT->stack_to;
         $transaction->stack_to = $stackToId;
-        $transaction->ref_id = $refId;
-        $transaction->ref_record_id = $refRecordId;
+        $transaction->ref_id = $rT->ref_id;
+        $transaction->ref_record_id = $rT->ref_record_id;
+        if($addRefId) {
+            $transaction->add_ref_id = $addRefId;
+        }
+        if($addRefRecordId) {
+            $transaction->add_ref_record_id = $addRefRecordId;
+        }
         $transaction->quantity = $tranQuantity;
         $transaction->remain_quantity = $tranQuantity;
 
-        $rT->remain_quantity -= $tranQuantity;
 
+
+        if (!$transaction->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+        }
+
+        /**
+         * reducing preview transaction remain quantity
+         */
+        $rT->remain_quantity -= $tranQuantity;
         if (!$rT->save()) {
             throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
         }
-        if (!$transaction->save()) {
-            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+
+        /**
+         * register flow - prev and next transaction
+         */
+        $flow = new StoreTransactionFlow();
+        $flow->prev_tran_id = $rT->id;
+        $flow->next_tran_id = $transaction->id;
+        $flow->quantity = $tranQuantity;
+        if (!$flow->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($flow->errors));
         }
         return $transaction;
     }
@@ -303,7 +409,6 @@ class Transactions
     }
 
     /**
-     * @param int $storeId
      * @return array
      */
     public static function getAllStacksBalance()
@@ -311,7 +416,7 @@ class Transactions
         return StoreTransactions::find()
             ->select([
                 '`store_stack`.id id',
-                'store_stack.name',
+                'CONCAT(store_store.name, \' - \' ,`store_stack`.`name`) `name`',
                 'store_stack.type',
                 'store_stack.product_name',
                 'store_stack.capacity',
@@ -329,14 +434,19 @@ class Transactions
             ->all();
     }
 
+
     /**
-     * @param int $unLoadTranId
-     * @return int[] array
-     * @throws \Exception
+     * @param $unLoadTranId
+     * @return array
+     * @throws Exception
+     * @throws \Throwable
+     * @throws \yii\db\StaleObjectException
      */
     public static function deleteUnload($unLoadTranId)
     {
-        $unloadTransaction = StoreTransactions::findOne($unLoadTranId);
+        if(!$unloadTransaction = StoreTransactions::findOne($unLoadTranId)){
+            throw new Exception('Can not find unload transaction for $unLoadTranId = ' . $unLoadTranId);
+        }
 
         $loadTranIdList = [];
         /** @var StoreWoff $woff */
@@ -344,7 +454,7 @@ class Transactions
             /** @var StoreTransactions $loadTran */
             $loadTran = $woff->getLoadTran()->one();
             $loadTranIdList[] = $loadTran->id;
-            $loadTran->remain_quantity += $woff->quantity;
+            $loadTran->remain_quantity += (float)$woff->quantity;
             if(!$loadTran->save()){
                 throw new Exception('Errror:' . VarDumper::dumpAsString($loadTran->getErrors()));
             }
@@ -353,8 +463,8 @@ class Transactions
             }
         }
 
-        if(!($unloadTransaction->delete())){
-            throw new \Exception('Errror:' . VarDumper::dumpAsString($unloadTransaction->getErrors()));
+        if(!$unloadTransaction->delete()){
+            throw new Exception('Errror:' . VarDumper::dumpAsString($unloadTransaction->getErrors()));
         }
 
         return $loadTranIdList;

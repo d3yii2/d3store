@@ -18,7 +18,13 @@ use Yii;
  * @property string $remain_quantity
  * @property integer $ref_id
  * @property string $ref_record_id
+ * @property integer $add_ref_id
+ * @property string $add_ref_record_id
  *
+ * @property \d3yii2\d3store\models\DmMoveDelivery[] $dmMoveDeliveries
+ * @property \d3yii2\d3store\models\SftSiftingDelivery[] $sftSiftingDeliveries
+ * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows
+ * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows0
  * @property \d3yii2\d3store\models\StoreStack $stackFrom
  * @property \d3yii2\d3store\models\StoreStack $stackTo
  * @property \d3yii2\d3store\models\StoreRef $ref
@@ -34,9 +40,9 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     /**
     * ENUM field values
     */
-    const ACTION_LOAD = 'Load';
-    const ACTION_UNLOAD = 'Unload';
-    const ACTION_MOVE = 'Move';
+    public const ACTION_LOAD = 'Load';
+    public const ACTION_UNLOAD = 'Unload';
+    public const ACTION_MOVE = 'Move';
     var $enum_labels = false;
     /**
      * @inheritdoc
@@ -56,7 +62,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
             [['action', 'tran_time', 'quantity', 'remain_quantity'], 'required'],
             [['action'], 'string'],
             [['tran_time'], 'safe'],
-            [['stack_from', 'stack_to', 'ref_id', 'ref_record_id'], 'integer'],
+            [['stack_from', 'stack_to', 'ref_id', 'ref_record_id', 'add_ref_id', 'add_ref_record_id'], 'integer'],
             [['quantity', 'remain_quantity'], 'number'],
             [['stack_from'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_from' => 'id']],
             [['stack_to'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_to' => 'id']],
@@ -85,7 +91,26 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
             'remain_quantity' => Yii::t('d3store', 'Remain quantity'),
             'ref_id' => Yii::t('d3store', 'Refernce model'),
             'ref_record_id' => Yii::t('d3store', 'Reference model record'),
+            'add_ref_id' => Yii::t('d3store', 'Add Ref ID'),
+            'add_ref_record_id' => Yii::t('d3store', 'Add Ref Record ID'),
         ];
+    }
+
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getStoreTransactionFlowsNext()
+    {
+        return $this->hasMany(\d3yii2\d3store\models\StoreTransactionFlow::className(), ['next_tran_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getStoreTransactionFlowsPrew()
+    {
+        return $this->hasMany(\d3yii2\d3store\models\StoreTransactionFlow::className(), ['prev_tran_id' => 'id']);
     }
 
     /**
