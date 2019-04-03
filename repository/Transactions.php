@@ -514,7 +514,10 @@ class Transactions
             ->innerJoin('store_transactions AS ut', 'store_woff.unload_tran_id = ut.id')
             ->andWhere
             ([
-                'store_transactions.action' => StoreTransactions::ACTION_LOAD,
+                'store_transactions.action' => [
+                    StoreTransactions::ACTION_LOAD,
+                    StoreTransactions::ACTION_MOVE,
+                ],
                 'store_transactions.ref_id' => $refId,
                 'store_transactions.ref_record_id' => $refRecordId
             ])
