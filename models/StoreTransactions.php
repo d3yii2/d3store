@@ -26,11 +26,13 @@ class StoreTransactions extends BaseStoreTransactions
 
     public function validateQuantity($attribute)
     {
-        if (self::ACTION_MOVE === $this->action || self::ACTION_UNLOAD === $this->action) {
-            $balance = Transactions::getStackBalance($this->stack_from);
-            if ($balance < $this->$attribute) {
-                $error = \Yii::t('d3store', 'Stacks actual balance is smallest requested quantity');
-                $this->addError($attribute, $error);
+        if($this->isNewRecord) {
+            if (self::ACTION_MOVE === $this->action || self::ACTION_UNLOAD === $this->action) {
+                $balance = Transactions::getStackBalance($this->stack_from);
+                if ($balance < $this->$attribute) {
+                    $error = \Yii::t('d3store', 'Stacks actual balance is smallest requested quantity');
+                    $this->addError($attribute, $error);
+                }
             }
         }
     }
