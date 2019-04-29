@@ -8,13 +8,22 @@ use yii\helpers\ArrayHelper;
 
 class Stack
 {
-    public static function getList(int $storeId, $full = true): array
+
+    /**
+     * @param int $storeId
+     * @param bool $full
+     * @return array
+     */
+    public static function getList(int $storeId = 0, $full = true): array
     {
-        $conditions = [
-            'store_id' => $storeId
-        ];
-        if(!$full){
-            $conditions['store_stack.active'] = 1;
+        $conditions = [];
+        if($storeId) {
+            $conditions = [
+                'store_id' => $storeId
+            ];
+            if (!$full) {
+                $conditions['store_stack.active'] = 1;
+            }
         }
         $stocks = StoreStack::find()
             ->select([
