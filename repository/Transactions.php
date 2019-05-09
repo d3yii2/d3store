@@ -131,7 +131,7 @@ class Transactions
      * @param int $addRefRecordId
      * @param int $loadRefId
      * @param array $loadRefRecordIdList
-     * @return bool
+     * @return StoreTransactions[]
      * @throws Exception
      */
     public static function moveFifo(
@@ -143,7 +143,7 @@ class Transactions
         int $addRefRecordId = 0,
         int $loadRefId = 0,
         array $loadRefRecordIdList = []
-    ): bool
+    ): array
     {
         self::clearError();
 
@@ -159,7 +159,7 @@ class Transactions
                 'loadRefId' => $loadRefId,
                 'loadRefRecordIdList' => $loadRefRecordIdList
             ]);
-            return false;
+            return [];
         }
 
         /**
@@ -203,6 +203,7 @@ class Transactions
          * registering move transactions and reduce common move quantity while is not empty
          */
         $moveQuantity = $quantity;
+        $moveTransactionList = [];
         foreach ($SortedRemainTran as $rT) {
 
             if ($moveQuantity > $rT->remain_quantity) {
@@ -213,13 +214,13 @@ class Transactions
                 $moveQuantity = 0;
             }
 
-            self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity,$addRefId,$addRefRecordId);
+            $moveTransactionList[] = self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity,$addRefId,$addRefRecordId);
 
             if ($moveQuantity < $quantity/1000000000) {
                 break;
             }
         }
-        return true;
+        return $moveTransactionList;
 
     }
 

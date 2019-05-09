@@ -37,9 +37,9 @@ class StoreTransactions extends BaseStoreTransactions
         }
     }
 
-    public function createMove()
+    public function createMove(): bool
     {
-        return Transactions::moveFifo(new \DateTime($this->tran_time), $this->quantity, $this->stack_from, $this->stack_to);
+        return (bool)Transactions::moveFifo(new \DateTime($this->tran_time), $this->quantity, $this->stack_from, $this->stack_to);
     }
 
 }
