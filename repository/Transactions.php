@@ -226,7 +226,12 @@ class Transactions
 
     public static function deleteMoveTransaction(int $reId, int $refRecordId): void
     {
-        foreach(StoreTransactions::findAll(['add_ref_id'=>$reId,'add_ref_record_id' => $refRecordId]) as $moveTran){
+        foreach(StoreTransactions::find()
+                    ->where(['add_ref_id'=>$reId,'add_ref_record_id' => $refRecordId])
+                    ->orderBy(['id' => SORT_DESC])
+                    ->all()
+                as $moveTran
+        ){
             if(!$tranFlow = StoreTransactionFlow::findOne(['next_tran_id' => $moveTran->id])){
                 throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
             }
