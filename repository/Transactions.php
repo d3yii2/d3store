@@ -152,9 +152,9 @@ class Transactions
          */
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
         if (round($stackBalance, 5) < round($quantity, 5)) {
-            self::registreError('No enough unload quantity', [
+            self::registreError('No enough quantity for transfer', [
                 'stackBalance' => round($stackBalance, 5),
-                'quantity' => round($quantity, 5),
+                'transfer quantity' => round($quantity, 5),
                 'stackFromId' => $stackFromId,
                 'loadRefId' => $loadRefId,
                 'loadRefRecordIdList' => $loadRefRecordIdList
