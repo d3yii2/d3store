@@ -1,11 +1,15 @@
-<?php
+<?php /** @noinspection PhpUndefinedClassInspection */
 
 namespace d3yii2\d3store\repository;
 
 use d3yii2\d3store\models\StoreTransactionFlow;
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
+use DateTime;
+use Throwable;
+use Yii;
 use yii\base\Exception;
+use yii\db\StaleObjectException;
 use yii\helpers\VarDumper;
 
 
@@ -14,7 +18,7 @@ class Transactions
     public static $errors = [];
 
     /**
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param $quantity
      * @param $stackToId
      * @param $refId
@@ -22,7 +26,7 @@ class Transactions
      * @return StoreTransactions
      * @throws \Exception
      */
-    public static function load($tranTime, $quantity, $stackToId, $refId, $refRecordId)
+    public static function load($tranTime, $quantity, $stackToId, $refId, $refRecordId): StoreTransactions
     {
         $transaction = new StoreTransactions();
         $transaction->action = StoreTransactions::ACTION_LOAD;
@@ -66,7 +70,7 @@ class Transactions
     }
 
     /**
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param int $quantity
      * @param int $stackFromId
      * @param int $refId
@@ -96,13 +100,32 @@ class Transactions
     }
 
     /**
-     * @param \DateTime $tranTime
-     * @param $quantity
-     * @param $stackFromId
-     * @param $refId
-     * @param $refRecordId
-     * @param array $loadRefRecordIdList
-     * @return StoreTransactions|bool
+     * @param $tranTime
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $refId
+     * @param int $refRecordId
+     * @param int[] $loadTranIdList
+     * @param bool $loadRefId
+     * @return array
+     * @throws Exception
+     */
+    public static function unLoadFifoByTranId($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadTranIdList,  $loadRefId = false ): array
+    {
+        self::clearError();
+        return self::writeOffByTran('fifo', $loadRefId, $loadTranIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
+
+    }
+
+    /**
+     * @param DateTime $tranTime
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $refId
+     * @param int $refRecordId
+     * @param bool $loadRefId
+     * @param int[] $loadRefRecordIdList
+     * @return bool|Transactions[]
      * @throws \Exception
      */
     public static function unLoadLifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
@@ -123,7 +146,7 @@ class Transactions
     }
 
     /**
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param float $quantity
      * @param int $stackFromId
      * @param int $stackToId
@@ -135,7 +158,7 @@ class Transactions
      * @throws Exception
      */
     public static function moveFifo(
-        \DateTime $tranTime,
+        DateTime $tranTime,
         float $quantity,
         int $stackFromId,
         int $stackToId,
@@ -226,7 +249,7 @@ class Transactions
 
 
     /**
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param float $quantity
      * @param int $stackFromId
      * @param int $stackToId
@@ -238,7 +261,7 @@ class Transactions
      * @throws Exception
      */
     public static function transactionsMoveFifo(
-        \DateTime $tranTime,
+        DateTime $tranTime,
         float $quantity,
         int $stackFromId,
         int $stackToId,
@@ -339,7 +362,7 @@ class Transactions
     /**
      * create store transaction, reducing remain in prev transaction and register  flow
      *
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param int $stackToId
      * @param StoreTransactions $rT
      * @param float $tranQuantity
@@ -349,7 +372,7 @@ class Transactions
      * @throws Exception
      */
     public static function moveTransaction(
-        \DateTime $tranTime,
+        DateTime $tranTime,
         int $stackToId,
         StoreTransactions $rT,
         float $tranQuantity,
@@ -408,7 +431,7 @@ class Transactions
      * @param string $type FIFO or ???
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
-     * @param \DateTime $tranTime
+     * @param DateTime $tranTime
      * @param float $quantity
      * @param int $stackFromId
      * @param int $refId
@@ -420,7 +443,7 @@ class Transactions
         string $type,
         int $loadRefId,
         array $loadRefRecordIdList,
-        \DateTime $tranTime,
+        DateTime $tranTime,
         float $quantity,
         int $stackFromId,
         int $refId,
@@ -488,13 +511,103 @@ class Transactions
 
     }
 
+
+    /**
+     * @param string $type
+     * @param int $loadRefId
+     * @param int[] $loadTranIdList
+     * @param DateTime $tranTime
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $refId
+     * @param int $refRecordId
+     * @return array
+     * @throws Exception
+     */
+    private static function writeOffByTran(
+        string $type,
+        int $loadRefId,
+        array $loadTranIdList,
+        DateTime $tranTime,
+        float $quantity,
+        int $stackFromId,
+        int $refId,
+        int $refRecordId
+    ): array
+    {
+
+        $sortDirection = ($type === 'fifo' ? SORT_ASC : SORT_DESC);
+
+        $query = StoreTransactions::find()
+            ->where([
+                'stack_to' => $stackFromId,
+                'ref_id' => $loadRefId,
+                'id' => $loadTranIdList
+            ])
+            ->andFilterCompare('remain_quantity', 0, '>')
+            ->orderBy(['tran_time' => $sortDirection]);
+
+        $remainTran = $query->all();
+
+        $woffQuantity = $quantity;
+        $transactionList = [];
+        foreach ($remainTran as $rT) {
+
+            if ($woffQuantity > $rT->remain_quantity) {
+                $woffQuantity -= $rT->remain_quantity;
+                $tranQuantity = $rT->remain_quantity;
+                $rT->remain_quantity = 0;
+            } else {
+                $rT->remain_quantity -= $woffQuantity;
+                $tranQuantity = $woffQuantity;
+                $woffQuantity = 0;
+            }
+
+            $transaction = new StoreTransactions();
+            $transaction->action = StoreTransactions::ACTION_UNLOAD;
+            $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
+            $transaction->quantity = $tranQuantity;
+            $transaction->remain_quantity = 0;
+            $transaction->stack_from = $stackFromId;
+            $transaction->ref_id = $refId;
+            $transaction->ref_record_id = $refRecordId;
+
+            if (!$transaction->save()) {
+                throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+            }
+            $transactionList[] = $transaction;
+            $woff = new StoreWoff();
+            $woff->unload_tran_id = $transaction->id;
+            $woff->load_tran_id = $rT->id;
+            $woff->quantity = $tranQuantity;
+
+            if (!$woff->save()) {
+                throw new Exception('Error:' . VarDumper::dumpAsString($woff->errors));
+            }
+            if (!$rT->save()) {
+                throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
+            }
+            if ($woffQuantity < 0.000001) {
+                break;
+            }
+        }
+
+        if($woffQuantity > 0.001){
+            throw new Exception('No enough unload quantity:' . $woffQuantity);
+
+        }
+
+        return $transactionList;
+
+    }
+
     /**
      * @param int $stackId
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
      * @return float
      */
-    public static function getStackBalance($stackId, $loadRefId = false, $loadRefRecordIdList = [])
+    public static function getStackBalance($stackId, $loadRefId = false, $loadRefRecordIdList = []): float
     {
         $query = StoreTransactions::find()
             ->where(['stack_to' => $stackId]);
@@ -508,7 +621,7 @@ class Transactions
     /**
      * @return array
      */
-    public static function getAllStacksBalance()
+    public static function getAllStacksBalance(): array
     {
         return StoreTransactions::find()
             ->select([
@@ -523,7 +636,7 @@ class Transactions
             ->innerJoin('`store_stack`', '`store_stack`.id = store_transactions.stack_to')
             ->innerJoin('`store_store`', 'store_store.id = `store_stack`.store_id')
             ->where([
-                'store_store.company_id' => \Yii::$app->SysCmp->getActiveCompanyId(),
+                'store_store.company_id' => Yii::$app->SysCmp->getActiveCompanyId(),
                 'store_stack.active' => 1
             ])
             ->groupBy('`store_stack`.id')
@@ -536,10 +649,10 @@ class Transactions
      * @param $unLoadTranId
      * @return array
      * @throws Exception
-     * @throws \Throwable
-     * @throws \yii\db\StaleObjectException
+     * @throws Throwable
+     * @throws StaleObjectException
      */
-    public static function deleteUnload($unLoadTranId)
+    public static function deleteUnload($unLoadTranId): array
     {
         if(!$unloadTransaction = StoreTransactions::findOne($unLoadTranId)){
             throw new Exception('Can not find unload transaction for $unLoadTranId = ' . $unLoadTranId);
@@ -621,10 +734,11 @@ class Transactions
             ->all();
     }
 
-    private static function clearError(){
+    private static function clearError(): void
+    {
         self::$errors = [];
     }
-    private static function registreError(string $message,$data)
+    private static function registreError(string $message,$data): void
     {
         self::$errors[] = [
             'message' => $message,
@@ -632,7 +746,7 @@ class Transactions
         ];
     }
 
-    public static function getErrors()
+    public static function getErrors(): array
     {
         return self::$errors;
     }
