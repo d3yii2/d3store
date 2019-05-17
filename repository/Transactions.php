@@ -224,6 +224,97 @@ class Transactions
 
     }
 
+
+    /**
+     * @param \DateTime $tranTime
+     * @param float $quantity
+     * @param int $stackFromId
+     * @param int $stackToId
+     * @param int $addRefId
+     * @param int $addRefRecordId
+     * @param int $loadRefId
+     * @param array $tranIdList
+     * @return array
+     * @throws Exception
+     */
+    public static function transactionsMoveFifo(
+        \DateTime $tranTime,
+        float $quantity,
+        int $stackFromId,
+        int $stackToId,
+        int $loadRefId,
+        array $tranIdList,
+        int $addRefId = 0,
+        int $addRefRecordId = 0
+    ): array
+    {
+        self::clearError();
+
+
+
+        /**
+         * get remain transactions sorted by transaction time
+         */
+        $query = StoreTransactions::find()
+            ->where([
+                'stack_to' => $stackFromId,
+                'id' => $tranIdList,
+                'ref_id' => $loadRefId
+            ])
+            ->andFilterCompare('remain_quantity', 0, '>')
+            ->orderBy(['tran_time' => SORT_DESC]);
+
+        $remainTran = $query->all();
+
+        /**
+         * extra sorting for more one level moving
+         */
+        $SortedRemainTran = [];
+        foreach ($remainTran as $k =>$tran){
+
+            $prevTran = clone $tran;
+            while($prevTran->action !== StoreTransactions::ACTION_LOAD){
+                /** @var StoreTransactionFlow $flow */
+                if(!$flow = $prevTran->getStoreTransactionFlowsNext()->one()){
+                    throw new Exception('Ca not found flow for StoreTransactions: ' . VarDumper::dumpAsString($prevTran->attributes()));
+                }
+                if(!$prevTran = $flow->getPrevTran()->one()){
+                    throw new Exception('Ca not found prev transaction for StoreTransactionFlow=' . VarDumper::dumpAsString($flow->attributes()));
+                }
+            }
+
+            $key = $prevTran->tran_time . $tran->id;
+            $SortedRemainTran[$key] = $tran;
+            unset($remainTran[$k]);
+        }
+
+        ksort($SortedRemainTran);
+
+        /**
+         * registering move transactions and reduce common move quantity while is not empty
+         */
+        $moveQuantity = $quantity;
+        $moveTransactionList = [];
+        foreach ($SortedRemainTran as $rT) {
+
+            if ($moveQuantity > $rT->remain_quantity) {
+                $moveQuantity -= $rT->remain_quantity;
+                $tranQuantity = $rT->remain_quantity;
+            } else {
+                $tranQuantity = $moveQuantity;
+                $moveQuantity = 0;
+            }
+
+            $moveTransactionList[] = self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity,$addRefId,$addRefRecordId);
+
+            if ($moveQuantity < $quantity/1000000000) {
+                break;
+            }
+        }
+        return $moveTransactionList;
+
+    }
+
     public static function deleteMoveTransaction(int $reId, int $refRecordId): void
     {
         foreach(StoreTransactions::find()
