@@ -593,6 +593,10 @@ class Transactions
         }
 
         if($woffQuantity > 0.001){
+            Yii::error(
+                'No enough unload quantity:' . $woffQuantity . PHP_EOL
+                .'$loadTranIdList:' . VarDumper::dumpAsString($loadTranIdList)
+            );
             throw new Exception('No enough unload quantity:' . $woffQuantity);
 
         }
