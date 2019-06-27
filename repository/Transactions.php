@@ -110,10 +110,31 @@ class Transactions
      * @return array
      * @throws Exception
      */
-    public static function unLoadFifoByTranId($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadTranIdList,  $loadRefId = false ): array
+    public static function unLoadFifoByTranId(
+        $tranTime,
+        $quantity,
+        $stackFromId,
+        $refId,
+        $refRecordId,
+        $loadTranIdList,
+        $loadRefId = false,
+        $addRefId = null,
+        $addRefRecordId = null
+    ): array
     {
         self::clearError();
-        return self::writeOffByTran('fifo', $loadRefId, $loadTranIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
+        return self::writeOffByTran(
+            'fifo',
+            $loadRefId,
+            $loadTranIdList,
+            $tranTime,
+            $quantity,
+            $stackFromId,
+            $refId,
+            $refRecordId,
+            $addRefId,
+            $addRefRecordId
+        );
 
     }
 
@@ -532,7 +553,9 @@ class Transactions
         float $quantity,
         int $stackFromId,
         int $refId,
-        int $refRecordId
+        int $refRecordId,
+        $addRefId = null,
+        $addRefRecordId = null
     ): array
     {
 
@@ -571,7 +594,10 @@ class Transactions
             $transaction->stack_from = $stackFromId;
             $transaction->ref_id = $refId;
             $transaction->ref_record_id = $refRecordId;
-
+            if($addRefId && $addRefRecordId){
+                $transaction->add_ref_id = $addRefId;
+                $transaction->add_ref_record_id = $addRefRecordId;
+            }
             if (!$transaction->save()) {
                 throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
             }
