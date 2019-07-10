@@ -2,6 +2,7 @@
 
 namespace d3yii2\d3store\repository;
 
+use coalmar\osta\repositories\StoreTransaction;
 use d3yii2\d3store\models\StoreTransactionFlow;
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
@@ -579,40 +580,22 @@ class Transactions
             if ($woffQuantity > $rT->remain_quantity) {
                 $woffQuantity -= $rT->remain_quantity;
                 $tranQuantity = $rT->remain_quantity;
-                $rT->remain_quantity = 0;
             } else {
-                $rT->remain_quantity -= $woffQuantity;
                 $tranQuantity = $woffQuantity;
                 $woffQuantity = 0;
             }
 
-            $transaction = new StoreTransactions();
-            $transaction->action = StoreTransactions::ACTION_UNLOAD;
-            $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
-            $transaction->quantity = $tranQuantity;
-            $transaction->remain_quantity = 0;
-            $transaction->stack_from = $stackFromId;
-            $transaction->ref_id = $refId;
-            $transaction->ref_record_id = $refRecordId;
-            if($addRefId && $addRefRecordId){
-                $transaction->add_ref_id = $addRefId;
-                $transaction->add_ref_record_id = $addRefRecordId;
-            }
-            if (!$transaction->save()) {
-                throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
-            }
-            $transactionList[] = $transaction;
-            $woff = new StoreWoff();
-            $woff->unload_tran_id = $transaction->id;
-            $woff->load_tran_id = $rT->id;
-            $woff->quantity = $tranQuantity;
+            $transactionList[] = self::createUnloadTran(
+                $tranTime,
+                $stackFromId,
+                $refId,
+                $refRecordId,
+                $addRefId,
+                $addRefRecordId,
+                $tranQuantity,
+                $rT
+            );
 
-            if (!$woff->save()) {
-                throw new Exception('Error:' . VarDumper::dumpAsString($woff->errors));
-            }
-            if (!$rT->save()) {
-                throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
-            }
             if ($woffQuantity < 0.000001) {
                 break;
             }
@@ -701,6 +684,7 @@ class Transactions
             if(!$woff->delete()){
                 throw new Exception('Errror:' . VarDumper::dumpAsString($woff->getErrors()));
             }
+            StoreTransaction::fixPrevTransactions($loadTran);
         }
 
         if(!$unloadTransaction->delete()){
@@ -779,6 +763,64 @@ class Transactions
     public static function getErrors(): array
     {
         return self::$errors;
+    }
+
+    /**
+     * @param DateTime $tranTime
+     * @param int $stackFromId
+     * @param int $refId
+     * @param int $refRecordId
+     * @param $addRefId
+     * @param $addRefRecordId
+     * @param float $tranQuantity
+     * @param array $transactionList
+     * @param StoreTransactions $rT
+     * @return StoreTransactions
+     * @throws Exception
+     */
+    public static function createUnloadTran(
+        DateTime $tranTime,
+        int $stackFromId,
+        int $refId,
+        int $refRecordId,
+        $addRefId,
+        $addRefRecordId,
+        float $tranQuantity,
+        StoreTransactions $rT
+    ): StoreTransactions
+    {
+        $transaction = new StoreTransactions();
+        $transaction->action = StoreTransactions::ACTION_UNLOAD;
+        $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
+        $transaction->quantity = $tranQuantity;
+        $transaction->remain_quantity = 0;
+        $transaction->stack_from = $stackFromId;
+        $transaction->ref_id = $refId;
+        $transaction->ref_record_id = $refRecordId;
+        if ($addRefId && $addRefRecordId) {
+            $transaction->add_ref_id = $addRefId;
+            $transaction->add_ref_record_id = $addRefRecordId;
+        }
+        if (!$transaction->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+        }
+
+        $woff = new StoreWoff();
+        $woff->unload_tran_id = $transaction->id;
+        $woff->load_tran_id = $rT->id;
+        $woff->quantity = $tranQuantity;
+
+        if (!$woff->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($woff->errors));
+        }
+        $rT->remain_quantity -= $tranQuantity;
+        if(abs($rT->remain_quantity) < 0.01){
+            $rT->remain_quantity = 0;
+        }
+        if (!$rT->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
+        }
+        return $transaction;
     }
 
 }
