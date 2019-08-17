@@ -4,7 +4,12 @@
 
 namespace d3yii2\d3store\models\base;
 
+use d3yii2\d3store\models\DmMoveDelivery;
+use d3yii2\d3store\models\SftSiftingDelivery;
+use d3yii2\d3store\models\StoreTransactionsQuery;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the base-model class for table "store_transactions".
@@ -14,15 +19,15 @@ use Yii;
  * @property string $tran_time
  * @property integer $stack_from
  * @property integer $stack_to
- * @property string $quantity
- * @property string $remain_quantity
+ * @property float $quantity
+ * @property float $remain_quantity
  * @property integer $ref_id
- * @property string $ref_record_id
+ * @property integer $ref_record_id
  * @property integer $add_ref_id
  * @property string $add_ref_record_id
  *
- * @property \d3yii2\d3store\models\DmMoveDelivery[] $dmMoveDeliveries
- * @property \d3yii2\d3store\models\SftSiftingDelivery[] $sftSiftingDeliveries
+ * @property DmMoveDelivery[] $dmMoveDeliveries
+ * @property SftSiftingDelivery[] $sftSiftingDeliveries
  * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows
  * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows0
  * @property \d3yii2\d3store\models\StoreStack $stackFrom
@@ -32,7 +37,7 @@ use Yii;
  * @property \d3yii2\d3store\models\StoreWoff[] $storeWoffs0
  * @property string $aliasModel
  */
-abstract class StoreTransactions extends \yii\db\ActiveRecord
+abstract class StoreTransactions extends ActiveRecord
 {
 
 
@@ -98,7 +103,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
 
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStoreTransactionFlowsNext()
     {
@@ -106,7 +111,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStoreTransactionFlowsPrew()
     {
@@ -114,7 +119,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStackFrom()
     {
@@ -122,7 +127,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStackTo()
     {
@@ -130,7 +135,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getRef()
     {
@@ -138,7 +143,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStoreWoffs()
     {
@@ -146,7 +151,7 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getStoreWoffs0()
     {
@@ -157,11 +162,11 @@ abstract class StoreTransactions extends \yii\db\ActiveRecord
     
     /**
      * @inheritdoc
-     * @return \d3yii2\d3store\models\StoreTransactionsQuery the active query used by this AR class.
+     * @return StoreTransactionsQuery the active query used by this AR class.
      */
     public static function find()
     {
-        return new \d3yii2\d3store\models\StoreTransactionsQuery(get_called_class());
+        return new StoreTransactionsQuery(get_called_class());
     }
 
 
