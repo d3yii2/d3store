@@ -2,6 +2,9 @@
 
 namespace d3yii2\d3store\repository;
 
+use d3yii2\d3store\models\StoreStack;
+use yii\helpers\ArrayHelper;
+
 class Stack
 {
     /**
