@@ -39,13 +39,13 @@ class StackDictionary{
         );
     }
 
-    public static function getCompanyList(int $companyId,bool $full = true): array
+    public static function getCompanyList(array $storesIdList,bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
-            self::createKeyCompany($companyId, $full),
-            static function () use($companyId, $full) {
+            self::createKeyCompany($storesIdList, $full),
+            static function () use($storesIdList, $full) {
                 $conditions = [
-                    'company_id' => $companyId
+                    'store.id' => $storesIdList
                 ];
                 if (!$full) {
                     $conditions['store_stack.active'] = 1;
@@ -69,17 +69,36 @@ class StackDictionary{
         return self::CACHE_KEY_LIST . '-LIST-' . $storeId . '-' . ($full?'TRUE':'FALSE');
     }
 
-    private static function createKeyCompany(int $companyId,bool $full): string
+    private static function createKeyCompany(array $companyIdList,bool $full): string
     {
-        return self::CACHE_KEY_LIST . '-COMPANY-' . $companyId . '-' . ($full?'TRUE':'FALSE');
+        $key = self::CACHE_KEY_LIST . '-COMPANY-' . implode('=',$companyIdList) . '-' . ($full?'TRUE':'FALSE');
+        $keys = self::getCompanyKeyList();
+        if(!in_array($key,$keys, true)){
+            $keys[] = $key;
+            Yii::$app->cache->set(self::CACHE_KEY_LIST . '-COMPANY-KEYS',$keys);
+        }
+        return $key;
     }
     public static function clearCache(): void
     {
         foreach(StoreStore::find()->all() as $store) {
             foreach([false,true] as $full) {
                 Yii::$app->cache->delete(self::createKeyList($store->id, $full));
-                Yii::$app->cache->delete(self::createKeyCompany($store->company_id, $full));
             }
         }
+        foreach(self::getCompanyKeyList() as $key){
+            Yii::$app->cache->delete($key);
+        }
+    }
+
+    /**
+     * @return array|mixed
+     */
+    private static function getCompanyKeyList()
+    {
+        if (!$keys = Yii::$app->cache->get(self::CACHE_KEY_LIST . '-COMPANY-KEYS')) {
+            $keys = [];
+        }
+        return $keys;
     }
 }
