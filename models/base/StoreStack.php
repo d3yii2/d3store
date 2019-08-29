@@ -31,13 +31,12 @@ abstract class StoreStack extends \yii\db\ActiveRecord
     /**
     * ENUM field values
     */
-    const TYPE_STANDARD = 'Standard';
-    const TYPE_TEHNICAL = 'Tehnical';
-    var $enum_labels = false;
+    public const TYPE_STANDARD = 'Standard';
+    public const TYPE_TEHNICAL = 'Tehnical';
     /**
      * @inheritdoc
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'store_stack';
     }
@@ -49,17 +48,18 @@ abstract class StoreStack extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['store_id'], 'required'],
-            [['store_id', 'capacity', 'active'], 'integer'],
-            [['type', 'notes'], 'string'],
-            [['name'], 'string', 'max' => 50],
-            [['product_name'], 'string', 'max' => 255],
-            [['store_id'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStore::className(), 'targetAttribute' => ['store_id' => 'id']],
-            ['type', 'in', 'range' => [
+            'enum-type' => ['type', 'in', 'range' => [
                     self::TYPE_STANDARD,
                     self::TYPE_TEHNICAL,
                 ]
-            ]
+            ],
+            'tinyint Unsigned' => [['active'],'integer' ,'min' => 0 ,'max' => 255],
+            'smallint Unsigned' => [['id','store_id'],'integer' ,'min' => 0 ,'max' => 65535],
+            'integer Signed' => [['capacity'],'integer' ,'min' => -2147483648 ,'max' => 2147483647],
+            [['store_id'], 'required'],
+            [['type', 'notes'], 'string'],
+            [['name', 'product_name'], 'string', 'max' => 255],
+            [['store_id'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStore::className(), 'targetAttribute' => ['store_id' => 'id']]
         ];
     }
 
@@ -104,6 +104,30 @@ abstract class StoreStack extends \yii\db\ActiveRecord
         return $this->hasMany(\d3yii2\d3store\models\StoreTransactions::className(), ['stack_to' => 'id']);
     }
 
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getVesselLoadTasks()
+    {
+        return $this->hasMany(\d3yii2\d3store\models\VesselLoadTask::className(), ['stack_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getVesselLoadeds()
+    {
+        return $this->hasMany(\d3yii2\d3store\models\VesselLoaded::className(), ['stack_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getVesselLoadings()
+    {
+        return $this->hasMany(\d3yii2\d3store\models\VesselLoading::className(), ['stack_id' => 'id']);
+    }
+
 
     
     /**
@@ -121,7 +145,11 @@ abstract class StoreStack extends \yii\db\ActiveRecord
      * @param string $value
      * @return string
      */
-    public static function getTypeValueLabel($value){
+    public static function getTypeValueLabel($value): string
+    {
+        if(!$value){
+            return '';
+        }
         $labels = self::optsType();
         if(isset($labels[$value])){
             return $labels[$value];
@@ -133,12 +161,11 @@ abstract class StoreStack extends \yii\db\ActiveRecord
      * column type ENUM value labels
      * @return array
      */
-    public static function optsType()
+    public static function optsType(): array
     {
         return [
-            self::TYPE_STANDARD => Yii::t('d3store', self::TYPE_STANDARD),
-            self::TYPE_TEHNICAL => Yii::t('d3store', self::TYPE_TEHNICAL),
+            self::TYPE_STANDARD => Yii::t('d3store', 'Standard'),
+            self::TYPE_TEHNICAL => Yii::t('d3store', 'Tehnical'),
         ];
     }
-
 }
