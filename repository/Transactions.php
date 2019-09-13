@@ -365,7 +365,11 @@ class Transactions
                 throw new Exception('Can not found Prev Tran for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
             }
             $prevTran->remain_quantity += (float)$tranFlow->quantity;
-            $prevTran->save();
+            if(!$prevTran->save()){
+                throw new Exception('Can not update prev tran: '
+                    . VarDumper::dumpAsString($moveTran->getAttributes()
+                    . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())));
+            }
             $tranFlow->delete();
             $moveTran->delete();
         }
