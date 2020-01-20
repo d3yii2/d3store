@@ -9,6 +9,8 @@ use Yii;
 
 /**
  * This is the model class for table "store_transactions".
+ * @method static self|null findOne($condition)
+ * @method static self[] findAll($condition)
  */
 class StoreTransactions extends BaseStoreTransactions
 {
