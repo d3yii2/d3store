@@ -3,6 +3,7 @@
 namespace d3yii2\d3store\dictionaries;
 
 use d3yii2\d3store\models\StoreStore;
+use Yii;
 use yii\helpers\ArrayHelper;
 
 class StoreDictionary
@@ -12,7 +13,7 @@ class StoreDictionary
 
     public static function getList(int $companyId): array
     {
-        return \Yii::$app->cache->getOrSet(
+        return Yii::$app->cache->getOrSet(
             self::createKey($companyId),
             static function () use ($companyId) {
                 return ArrayHelper::map(
@@ -49,7 +50,7 @@ class StoreDictionary
                 ->asArray()
                 ->column() as $companyId
         ) {
-            \Yii::$app->cache->delete(self::createKey($companyId));
+            Yii::$app->cache->delete(self::createKey($companyId));
         }
     }
 }

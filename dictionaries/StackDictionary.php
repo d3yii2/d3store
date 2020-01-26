@@ -82,9 +82,11 @@ class StackDictionary{
     public static function clearCache(): void
     {
         foreach(StoreStore::find()->all() as $store) {
-            foreach([false,true] as $full) {
-                Yii::$app->cache->delete(self::createKeyList($store->id, $full));
-            }
+            Yii::$app->cache->delete(self::createKeyList(0, false));
+            Yii::$app->cache->delete(self::createKeyList(0, true));
+            Yii::$app->cache->delete(self::createKeyList($store->id, false));
+            Yii::$app->cache->delete(self::createKeyList($store->id, true));
+
         }
         foreach(self::getCompanyKeyList() as $key){
             Yii::$app->cache->delete($key);
