@@ -47,7 +47,6 @@ class StoreDictionary
             StoreStore::find()
                 ->select(['company_id'])
                 ->distinct()
-                ->asArray()
                 ->column() as $companyId
         ) {
             Yii::$app->cache->delete(self::createKey($companyId));
