@@ -57,6 +57,14 @@ class Transactions
 
     }
 
+    /**
+     * @param $refId
+     * @param $refRecordId
+     * @return bool
+     * @throws Exception
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
     public static function deleteLoad($refId, $refRecordId): bool
     {
         $searchParam = [
@@ -350,6 +358,13 @@ class Transactions
 
     }
 
+    /**
+     * @param int $reId
+     * @param int $refRecordId
+     * @throws Exception
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
     public static function deleteMoveTransaction(int $reId, int $refRecordId): void
     {
         foreach(StoreTransactions::find()
@@ -358,22 +373,12 @@ class Transactions
                     ->all()
                 as $moveTran
         ){
-            if(!$tranFlow = StoreTransactionFlow::findOne(['next_tran_id' => $moveTran->id])){
-                throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
-            }
-            if(!$prevTran = StoreTransactions::findOne(['id' => $tranFlow->prev_tran_id])){
-                throw new Exception('Can not found Prev Tran for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
-            }
-            $prevTran->remain_quantity += (float)$tranFlow->quantity;
-            if(!$prevTran->save()){
-                throw new Exception('Can not update prev tran: '
-                    . VarDumper::dumpAsString($moveTran->getAttributes()
-                    . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())));
-            }
-            $tranFlow->delete();
-            $moveTran->delete();
+            self::deleteMoveTransactionByTran($moveTran);
         }
     }
+
+
+
 
     /**
      * create store transaction, reducing remain in prev transaction and register  flow
@@ -664,6 +669,7 @@ class Transactions
 
     /**
      * @return array
+     * @throws \yii\db\Exception
      */
     public static function getAllStacksBalance(): array
     {
@@ -793,6 +799,32 @@ class Transactions
     public static function getErrors(): array
     {
         return self::$errors;
+    }
+
+    /**
+     * @param StoreTransactions|null $moveTran
+     * @return StoreTransactions
+     * @throws Exception
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
+    public static function deleteMoveTransactionByTran($moveTran): StoreTransactions
+    {
+        if (!$tranFlow = StoreTransactionFlow::findOne(['next_tran_id' => $moveTran->id])) {
+            throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
+        }
+        if (!$prevTran = StoreTransactions::findOne(['id' => $tranFlow->prev_tran_id])) {
+            throw new Exception('Can not found Prev Tran for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
+        }
+        $prevTran->remain_quantity += (float)$tranFlow->quantity;
+        if (!$prevTran->save()) {
+            throw new Exception('Can not update prev tran: '
+                . VarDumper::dumpAsString($moveTran->getAttributes()
+                    . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())));
+        }
+        $tranFlow->delete();
+        $moveTran->delete();
+        return $prevTran;
     }
 
 }
