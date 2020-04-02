@@ -1,5 +1,5 @@
 <?php
-namespace d3yii2\d3store\phpunit\repository\repository;
+namespace d3yii2\d3store\phpunit\repository;
 
 use d3yii2\d3store\repository\Transactions;
 use d3yii2\d3store\phpunit\repository\CreateData;
