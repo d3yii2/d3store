@@ -37,7 +37,7 @@
 ) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8</sql_create_table>
 </table>
 <table name="store_transaction_flow" view="colnames">
-<left>654</left>
+<left>714</left>
 <top>203</top>
 <width>159</width>
 <height>131</height>
@@ -51,7 +51,7 @@
   KEY `next_tran_id` (`next_tran_id`),
   CONSTRAINT `store_tran_flow_ibfk_next` FOREIGN KEY (`next_tran_id`) REFERENCES `store_transactions` (`id`),
   CONSTRAINT `store_tran_flow_ibfk_prev` FOREIGN KEY (`prev_tran_id`) REFERENCES `store_transactions` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2543 DEFAULT CHARSET=latin1</sql_create_table>
+) ENGINE=InnoDB AUTO_INCREMENT=2547 DEFAULT CHARSET=latin1</sql_create_table>
 </table>
 <table name="store_store" view="colnames">
 <left>71</left>
@@ -70,8 +70,8 @@
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8</sql_create_table>
 </table>
 <table name="store_transactions" view="colnames">
-<left>468</left>
-<top>64</top>
+<left>453</left>
+<top>142</top>
 <width>143</width>
 <height>250</height>
 <sql_create_table>CREATE TABLE `store_transactions` (
@@ -95,11 +95,11 @@
   CONSTRAINT `store_transactions_ibfk_1` FOREIGN KEY (`stack_from`) REFERENCES `store_stack` (`id`),
   CONSTRAINT `store_transactions_ibfk_2` FOREIGN KEY (`stack_to`) REFERENCES `store_stack` (`id`),
   CONSTRAINT `store_transactions_ibfk_3` FOREIGN KEY (`ref_id`) REFERENCES `store_ref` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9206 DEFAULT CHARSET=utf8</sql_create_table>
+) ENGINE=InnoDB AUTO_INCREMENT=9210 DEFAULT CHARSET=utf8</sql_create_table>
 </table>
 <table name="store_woff" view="colnames">
-<left>655</left>
-<top>62</top>
+<left>714</left>
+<top>56</top>
 <width>178</width>
 <height>131</height>
 <sql_create_table>CREATE TABLE `store_woff` (
@@ -113,6 +113,39 @@
   CONSTRAINT `store_woff_ibfk_1` FOREIGN KEY (`load_tran_id`) REFERENCES `store_transactions` (`id`),
   CONSTRAINT `store_woff_ibfk_2` FOREIGN KEY (`unload_tran_id`) REFERENCES `store_transactions` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1</sql_create_table>
+</table>
+<table name="store_fixes" view="colnames">
+<left>714</left>
+<top>352</top>
+<width>164</width>
+<height>182</height>
+<sql_create_table>CREATE TABLE `store_fixes` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `transaction_id` int(10) unsigned NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `quantity` decimal(13,3) DEFAULT NULL,
+  `ref_model_id` tinyint(3) unsigned DEFAULT NULL,
+  `ref_model_record_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `store_fixes_ibfk_transaction` (`transaction_id`),
+  KEY `store_fixes_ibfk_model` (`ref_model_id`),
+  CONSTRAINT `store_fixes_ibfk_model` FOREIGN KEY (`ref_model_id`) REFERENCES `sys_models` (`id`),
+  CONSTRAINT `store_fixes_ibfk_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `store_transactions` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1</sql_create_table>
+</table>
+<table name="sys_models" view="colnames">
+<left>486</left>
+<top>422</top>
+<width>105</width>
+<height>114</height>
+<sql_create_table>CREATE TABLE `sys_models` (
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `table_name` varchar(256) NOT NULL COMMENT 'Table',
+  `class_name` varchar(256) DEFAULT NULL COMMENT 'Class',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `table_name` (`table_name`,`class_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=ascii</sql_create_table>
 </table>
 </tables>
 </canvas>
