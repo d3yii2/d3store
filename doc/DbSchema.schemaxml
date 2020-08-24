@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemadesigner version="6.5">
+<source>
+<database charset="latin1" collation="latin1_swedish_ci">cewood_20200120</database>
+</source>
+<canvas zoom="100">
+<tables>
+<table name="store_ref" view="colnames">
+<left>260</left>
+<top>313</top>
+<width>105</width>
+<height>114</height>
+<sql_create_table>CREATE TABLE `store_ref` (
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) DEFAULT NULL COMMENT 'Name',
+  `class_name` varchar(255) DEFAULT NULL COMMENT 'Class Name',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8</sql_create_table>
+</table>
+<table name="store_stack" view="colnames">
+<left>251</left>
+<top>78</top>
+<width>120</width>
+<height>199</height>
+<sql_create_table>CREATE TABLE `store_stack` (
+  `id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
+  `store_id` smallint(5) unsigned NOT NULL COMMENT 'Store',
+  `name` varchar(255) DEFAULT NULL COMMENT 'Stack name',
+  `type` enum('Standard','Tehnical') DEFAULT NULL COMMENT 'Type',
+  `product_name` varchar(255) DEFAULT NULL COMMENT 'Product',
+  `capacity` int(11) DEFAULT NULL COMMENT 'Capacity',
+  `notes` text COMMENT 'Notes',
+  `active` tinyint(3) unsigned NOT NULL DEFAULT '1' COMMENT 'Active',
+  PRIMARY KEY (`id`),
+  KEY `store_id` (`store_id`),
+  CONSTRAINT `store_stack_ibfk_1` FOREIGN KEY (`store_id`) REFERENCES `store_store` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8</sql_create_table>
+</table>
+<table name="store_transaction_flow" view="colnames">
+<left>654</left>
+<top>203</top>
+<width>159</width>
+<height>131</height>
+<sql_create_table>CREATE TABLE `store_transaction_flow` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `prev_tran_id` int(10) unsigned NOT NULL COMMENT 'Prev transaction',
+  `next_tran_id` int(10) unsigned DEFAULT NULL COMMENT 'Next transaction',
+  `quantity` decimal(13,3) DEFAULT '3.000' COMMENT 'Quantity',
+  PRIMARY KEY (`id`),
+  KEY `prev_tran_id` (`prev_tran_id`),
+  KEY `next_tran_id` (`next_tran_id`),
+  CONSTRAINT `store_tran_flow_ibfk_next` FOREIGN KEY (`next_tran_id`) REFERENCES `store_transactions` (`id`),
+  CONSTRAINT `store_tran_flow_ibfk_prev` FOREIGN KEY (`prev_tran_id`) REFERENCES `store_transactions` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2543 DEFAULT CHARSET=latin1</sql_create_table>
+</table>
+<table name="store_store" view="colnames">
+<left>71</left>
+<top>82</top>
+<width>107</width>
+<height>165</height>
+<sql_create_table>CREATE TABLE `store_store` (
+  `id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
+  `company_id` smallint(5) unsigned NOT NULL,
+  `name` varchar(50) DEFAULT NULL COMMENT 'Store Name',
+  `address` varchar(255) DEFAULT NULL COMMENT 'Store Address',
+  `capacity` tinyint(4) DEFAULT NULL COMMENT 'Capacity',
+  `active` tinyint(4) DEFAULT '1' COMMENT 'Active',
+  PRIMARY KEY (`id`),
+  KEY `sys_company_id` (`company_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8</sql_create_table>
+</table>
+<table name="store_transactions" view="colnames">
+<left>468</left>
+<top>64</top>
+<width>143</width>
+<height>250</height>
+<sql_create_table>CREATE TABLE `store_transactions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `action` enum('Load','Unload','Move') NOT NULL COMMENT 'Action',
+  `tran_time` datetime NOT NULL COMMENT 'Time',
+  `stack_from` smallint(5) unsigned DEFAULT NULL COMMENT 'From stack',
+  `stack_to` smallint(5) unsigned DEFAULT NULL COMMENT 'To stack',
+  `quantity` decimal(13,3) NOT NULL COMMENT 'quantity',
+  `remain_quantity` decimal(13,3) NOT NULL COMMENT 'Remain quantity',
+  `ref_id` tinyint(3) unsigned DEFAULT NULL COMMENT 'Refernce model',
+  `ref_record_id` int(10) unsigned DEFAULT NULL COMMENT 'Reference model record',
+  `add_ref_id` tinyint(3) unsigned DEFAULT NULL,
+  `add_ref_record_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `stack_from` (`stack_from`),
+  KEY `ref_id` (`ref_id`),
+  KEY `ref_record_id` (`ref_record_id`,`ref_id`),
+  KEY `add_ref` (`add_ref_id`,`add_ref_record_id`),
+  KEY `stack_to` (`stack_to`,`remain_quantity`),
+  CONSTRAINT `store_transactions_ibfk_1` FOREIGN KEY (`stack_from`) REFERENCES `store_stack` (`id`),
+  CONSTRAINT `store_transactions_ibfk_2` FOREIGN KEY (`stack_to`) REFERENCES `store_stack` (`id`),
+  CONSTRAINT `store_transactions_ibfk_3` FOREIGN KEY (`ref_id`) REFERENCES `store_ref` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9206 DEFAULT CHARSET=utf8</sql_create_table>
+</table>
+<table name="store_woff" view="colnames">
+<left>655</left>
+<top>62</top>
+<width>178</width>
+<height>131</height>
+<sql_create_table>CREATE TABLE `store_woff` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `load_tran_id` int(10) unsigned NOT NULL COMMENT 'Load transaction',
+  `unload_tran_id` int(10) unsigned DEFAULT NULL COMMENT 'Unload transaction',
+  `quantity` decimal(13,3) DEFAULT '3.000' COMMENT 'Quantity',
+  PRIMARY KEY (`id`),
+  KEY `load_tran_id` (`load_tran_id`),
+  KEY `unload_tran_id` (`unload_tran_id`),
+  CONSTRAINT `store_woff_ibfk_1` FOREIGN KEY (`load_tran_id`) REFERENCES `store_transactions` (`id`),
+  CONSTRAINT `store_woff_ibfk_2` FOREIGN KEY (`unload_tran_id`) REFERENCES `store_transactions` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1</sql_create_table>
+</table>
+</tables>
+</canvas>
+</schemadesigner>
