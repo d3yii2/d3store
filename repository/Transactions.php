@@ -401,6 +401,9 @@ class Transactions
         int $addRefRecordId = 0
     ): StoreTransactions
     {
+        if($tranQuantity < 0){
+            throw new Exception('Error: quantity must be positive');
+        }
 
         /**
          * move transaction

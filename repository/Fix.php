@@ -39,8 +39,7 @@ class Fix
         $fixModel->quantity = $qnt;
         if ($refModel) {
             $fixModel->refModelObject = $refModel;
-            $primaryKeyField = $refModel->primaryKey;
-            $fixModel->ref_model_record_id = $refModel->$$primaryKeyField;
+            $fixModel->ref_model_record_id = $refModel->primaryKey;
         }
         if (!$fixModel->save()) {
             throw new D3ActiveRecordException($fixModel);
