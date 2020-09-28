@@ -25,18 +25,19 @@ class Fix
     }
 
     /**
-     * @param float $qnt
+     * @param float $qnt - new quantity
      * @param null|int $userId
      * @param null|ActiveRecord|object $refModel
      * @throws D3ActiveRecordException
      */
     public function register(float $qnt, $userId = null, $refModel = null): void
     {
-        $this->transaction->remain_quantity += $qnt;
+        $fixQnt = $qnt - $this->transaction->remain_quantity;
+        $this->transaction->remain_quantity = $qnt;
         $fixModel = new StoreFixes();
         $fixModel->transaction_id = $this->transaction->id;
         $fixModel->user_id = $userId;
-        $fixModel->quantity = $qnt;
+        $fixModel->quantity = $fixQnt;
         if ($refModel) {
             $fixModel->refModelObject = $refModel;
             $fixModel->ref_model_record_id = $refModel->primaryKey;
