@@ -10,6 +10,7 @@ use Throwable;
 use Yii;
 use yii\base\Exception;
 use yii\db\StaleObjectException;
+use yii\helpers\ArrayHelper;
 use yii\helpers\VarDumper;
 
 
@@ -452,6 +453,51 @@ class Transactions
     }
 
     /**
+     * add to store transaction, reducing remain in prev transaction and register  flow
+     *
+     * @param StoreTransactions $transaction
+     * @param StoreTransactions $rT
+     * @param float $tranQuantity
+     * @throws Exception
+     */
+    public static function moveTransactionAdd(
+        StoreTransactions $transaction,
+        StoreTransactions $rT,
+        float $tranQuantity
+    )
+    {
+        if($tranQuantity < 0){
+            throw new Exception('Error: quantity must be positive');
+        }
+
+        $transaction->quantity += $tranQuantity;
+        $transaction->remain_quantity += $tranQuantity;
+
+        if (!$transaction->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+        }
+
+        /**
+         * reducing preview transaction remain quantity
+         */
+        $rT->remain_quantity -= $tranQuantity;
+        if (!$rT->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
+        }
+
+        /**
+         * register flow - prev and next transaction
+         */
+        $flow = new StoreTransactionFlow();
+        $flow->prev_tran_id = $rT->id;
+        $flow->next_tran_id = $transaction->id;
+        $flow->quantity = $tranQuantity;
+        if (!$flow->save()) {
+            throw new Exception('Error:' . VarDumper::dumpAsString($flow->errors));
+        }
+    }
+
+    /**
      * @param string $type FIFO or ???
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
@@ -811,21 +857,26 @@ class Transactions
      * @throws StaleObjectException
      * @throws Throwable
      */
-    public static function deleteMoveTransactionByTran($moveTran): StoreTransactions
+    public static function deleteMoveTransactionByTran(StoreTransactions $moveTran): StoreTransactions
     {
-        if (!$tranFlow = StoreTransactionFlow::findOne(['next_tran_id' => $moveTran->id])) {
+        if (!$tranFlowList = StoreTransactionFlow::findAll(['next_tran_id' => $moveTran->id])) {
             throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
         }
-        if (!$prevTran = StoreTransactions::findOne(['id' => $tranFlow->prev_tran_id])) {
+        if (!$prevTran = StoreTransactions::findOne(['id' => ArrayHelper::getColumn($tranFlowList,'prev_tran_id')])) {
             throw new Exception('Can not found Prev Tran for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
         }
-        $prevTran->remain_quantity += (float)$tranFlow->quantity;
+        foreach($tranFlowList as $tranFlow) {
+            $prevTran->remain_quantity += (float)$tranFlow->quantity;
+        }
         if (!$prevTran->save()) {
             throw new Exception('Can not update prev tran: '
                 . VarDumper::dumpAsString($moveTran->getAttributes()
                     . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())));
         }
-        $tranFlow->delete();
+        foreach($tranFlowList as $tranFlow) {
+            $tranFlow->delete();
+        }
+
         $moveTran->delete();
         return $prevTran;
     }
