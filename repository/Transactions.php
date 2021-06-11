@@ -881,4 +881,40 @@ class Transactions
         return $prevTran;
     }
 
+
+    /**
+     * @param StoreTransactions|null $woffTran
+     * @return StoreTransactions[]
+     * @throws Exception
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
+    public static function deleteWoffTransactionByTran(StoreTransactions $woffTran): array
+    {
+        if (!$woffList = StoreWoff::findAll(['unload_tran_id' => $woffTran->id])) {
+            throw new Exception('Can not found StoreWoff for move tran: ' . VarDumper::dumpAsString($woffTran->getAttributes()));
+        }
+
+        $loadTranList = [];
+        foreach($woffList as $woff) {
+            if (!$loadTran = StoreTransactions::findOne($woff->load_tran_id)) {
+                throw new Exception('Can not found Load Tran for woff tran: ' . PHP_EOL
+                    . '$woffTran: ' . VarDumper::dumpAsString($woffTran->getAttributes()) . PHP_EOL
+                    . '$woff: ' .  VarDumper::dumpAsString($woff->getAttributes())
+                );
+            }
+            $loadTran->remain_quantity += (float)$woff->quantity;
+            if (!$loadTran->save()) {
+                throw new Exception('Can not update prev tran: '
+                    . VarDumper::dumpAsString($woffTran->getAttributes()
+                        . ' Error:' . VarDumper::dumpAsString($loadTran->getErrors())));
+            }
+            $loadTranList[] = $loadTran;
+            $woff->delete();
+        }
+
+        $woffTran->delete();
+        return $loadTranList;
+    }
+
 }
