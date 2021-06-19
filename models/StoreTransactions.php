@@ -34,7 +34,14 @@ class StoreTransactions extends BaseStoreTransactions
             if (self::ACTION_MOVE === $this->action || self::ACTION_UNLOAD === $this->action) {
                 $balance = Transactions::getStackBalance($this->stack_from);
                 if (round($balance,3) < round($this->$attribute,3)) {
-                    $error = Yii::t('d3store', 'Stacks actual balance is smallest requested quantity');
+                    $error = Yii::t(
+                        'd3store',
+                        'Stacks actual balance {stockBalance} is smallest requested {quantity} quantity',
+                        [
+                            'stockBalance' => round($balance,3),
+                            'quantity' => round($this->$attribute,3),
+                        ]
+                    );
                     $this->addError($attribute, $error);
                 }
             }

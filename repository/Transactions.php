@@ -587,7 +587,13 @@ class Transactions
         $transaction->ref_record_id = $refRecordId;
 
         if (!$transaction->save()) {
-            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+            throw new Exception('Error:'
+                . VarDumper::dumpAsString($transaction->errors) . PHP_EOL
+                . 'Transaction: ' .  VarDumper::dumpAsString($rT->attributes) . PHP_EOL
+                . '$tranQuantity: ' . $tranQuantity . PHP_EOL
+                . '$refId: ' . $refId . PHP_EOL
+                . '$refRecordId: ' . $refRecordId
+            );
         }
         $transactionList[] = $transaction;
         $woff = new StoreWoff();
