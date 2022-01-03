@@ -590,6 +590,7 @@ class Transactions
             throw new Exception('Error:'
                 . VarDumper::dumpAsString($transaction->errors) . PHP_EOL
                 . 'Transaction: ' .  VarDumper::dumpAsString($rT->attributes) . PHP_EOL
+                . 'Woff tran: ' .  VarDumper::dumpAsString($transaction->attributes) . PHP_EOL
                 . '$tranQuantity: ' . $tranQuantity . PHP_EOL
                 . '$refId: ' . $refId . PHP_EOL
                 . '$refRecordId: ' . $refRecordId
