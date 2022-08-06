@@ -68,6 +68,49 @@ class StackDictionary{
         );
     }
 
+    public static function getCompanyStackList(int $companyId = null, bool $full = true): array
+    {
+        return Yii::$app->cache->getOrSet(
+            self::createKeyCompanyStackList($companyId, $full),
+            static function () use ($companyId, $full) {
+                $conditions = [];
+                if ($companyId) {
+                    $conditions['store.company_id'] = $companyId;
+                }
+                if (!$full) {
+                    $conditions['store_stack.active'] = 1;
+                }
+                $stocks = StoreStack::find()
+                    ->select([
+                        'store_stack.id',
+                        'concat(store.name, " - ", store_stack.name) name'
+                    ])
+                    ->innerJoin(
+                        'store_store store',
+                        'store.id = store_stack.store_id'
+                    )
+                    ->where($conditions)
+                    ->orderBy('store.name, store_stack.name')
+                    ->asArray()
+                    ->all();
+                return ArrayHelper::map($stocks, 'id', 'name');
+            }
+        );
+    }
+
+    /**
+     * @param int|null $companyId
+     * @param bool $full
+     * @return string
+     */
+    private static function createKeyCompanyStackList(int $companyId = null, bool $full = true): string
+    {
+        if (!$companyId) {
+            $companyId = 0;
+        }
+        return 'StoreCompanyStackList' . $companyId . '-' . $full;
+    }
+
     public static function getCompanyList(array $storesIdList,bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
@@ -114,7 +157,7 @@ class StackDictionary{
     }
     public static function clearCache(): void
     {
-        foreach(StoreStore::find()->all() as $store) {
+        foreach (StoreStore::find()->all() as $store) {
             Yii::$app->cache->delete(self::createKeyList(0, false));
             Yii::$app->cache->delete(self::createKeyList(0, true));
             Yii::$app->cache->delete(self::createKeyList($store->id, false));
@@ -123,10 +166,16 @@ class StackDictionary{
             Yii::$app->cache->delete(self::createKeyStackNameList(0, true));
             Yii::$app->cache->delete(self::createKeyStackNameList($store->id, false));
             Yii::$app->cache->delete(self::createKeyStackNameList($store->id, true));
-
         }
-        foreach(self::getCompanyKeyList() as $key){
+        foreach (self::getCompanyKeyList() as $key) {
             Yii::$app->cache->delete($key);
+        }
+        foreach (StoreStore::find()
+            ->distinct()
+            ->select('company_id')
+            ->column() as $companyId) {
+            Yii::$app->cache->delete(self::createKeyCompanyStackList($companyId, false));
+            Yii::$app->cache->delete(self::createKeyCompanyStackList($companyId, true));
         }
     }
 

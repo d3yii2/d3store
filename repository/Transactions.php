@@ -128,7 +128,7 @@ class Transactions
      * @param int $refRecordId
      * @param int[] $loadTranIdList
      * @param bool $loadRefId
-     * @return array
+     * @return StoreTransactions[]
      * @throws Exception
      */
     public static function unLoadFifoByTranId($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadTranIdList,  $loadRefId = false ): array
