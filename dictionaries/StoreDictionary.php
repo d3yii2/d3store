@@ -11,6 +11,17 @@ class StoreDictionary
 
     private const CACHE_KEY_LIST = 'StoreDictionaryList';
 
+    public static function getListExtended(int $companyId, array $storesIds)
+    {
+        $list = self::getList($companyId);
+        foreach ($list as $k => $v) {
+            if (!in_array($k,$storesIds, false)) {
+                unset($list[$k]);
+            }
+        }
+        return $list;
+    }
+
     public static function getList(int $companyId = null): array
     {
         return Yii::$app->cache->getOrSet(
