@@ -2,23 +2,25 @@
 
 namespace d3yii2\d3store\dictionaries;
 
+use d3system\exceptions\D3ActiveRecordException;
 use d3yii2\d3store\models\StoreStack;
 use d3yii2\d3store\models\StoreStore;
 use Yii;
+use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
-class StackDictionary{
-
+class StackDictionary
+{
     private const CACHE_KEY_LIST = 'StackDictionaryList';
     private const CACHE_KEY_LIST_STACK_NAME = 'StackDictionaryListStName';
 
-    public static function getList(int $storeId = 0,bool $full = true): array
+    public static function getList(int $storeId = 0, bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
             self::createKeyList($storeId, $full),
-            static function () use($storeId, $full) {
+            static function () use ($storeId, $full) {
                 $conditions = [];
-                if($storeId) {
+                if ($storeId) {
                     $conditions = [
                         'store_id' => $storeId
                     ];
@@ -31,7 +33,7 @@ class StackDictionary{
                         'store_stack.id',
                         'concat(store.name, " - ", store_stack.name) name'
                     ])
-                    ->innerJoin('store_store store','store.id = store_stack.store_id')
+                    ->innerJoin('store_store store', 'store.id = store_stack.store_id')
                     ->where($conditions)
                     ->orderBy('store.name, store_stack.name')
                     ->all();
@@ -40,13 +42,13 @@ class StackDictionary{
         );
     }
 
-    public static function getStackNameList(int $storeId = 0,bool $full = true): array
+    public static function getStackNameList(int $storeId = 0, bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
             self::createKeyStackNameList($storeId, $full),
-            static function () use($storeId, $full) {
+            static function () use ($storeId, $full) {
                 $conditions = [];
-                if($storeId) {
+                if ($storeId) {
                     $conditions = [
                         'store_id' => $storeId
                     ];
@@ -59,7 +61,7 @@ class StackDictionary{
                         'store_stack.id',
                         'store_stack.name name'
                     ])
-                    ->innerJoin('store_store store','store.id = store_stack.store_id')
+                    ->innerJoin('store_store store', 'store.id = store_stack.store_id')
                     ->where($conditions)
                     ->orderBy('store.name, store_stack.name')
                     ->all();
@@ -111,11 +113,11 @@ class StackDictionary{
         return 'StoreCompanyStackList' . $companyId . '-' . $full;
     }
 
-    public static function getCompanyList(array $storesIdList,bool $full = true): array
+    public static function getCompanyList(array $storesIdList, bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
             self::createKeyCompany($storesIdList, $full),
-            static function () use($storesIdList, $full) {
+            static function () use ($storesIdList, $full) {
                 $conditions = [
                     'store.id' => $storesIdList
                 ];
@@ -145,13 +147,13 @@ class StackDictionary{
         return self::CACHE_KEY_LIST_STACK_NAME . '-LIST-' . $storeId . '-' . ($full?'TRUE':'FALSE');
     }
 
-    private static function createKeyCompany(array $companyIdList,bool $full): string
+    private static function createKeyCompany(array $companyIdList, bool $full): string
     {
-        $key = self::CACHE_KEY_LIST . '-COMPANY-' . implode('=',$companyIdList) . '-' . ($full?'TRUE':'FALSE');
+        $key = self::CACHE_KEY_LIST . '-COMPANY-' . implode('=', $companyIdList) . '-' . ($full?'TRUE':'FALSE');
         $keys = self::getCompanyKeyList();
-        if(!in_array($key,$keys, true)){
+        if (!in_array($key, $keys, true)) {
             $keys[] = $key;
-            Yii::$app->cache->set(self::CACHE_KEY_LIST . '-COMPANY-KEYS',$keys);
+            Yii::$app->cache->set(self::CACHE_KEY_LIST . '-COMPANY-KEYS', $keys);
         }
         return $key;
     }
@@ -188,5 +190,65 @@ class StackDictionary{
             $keys = [];
         }
         return $keys;
+    }
+
+
+
+    /**
+     * find or create stack by keys
+     * @param int $storeId
+     * @param string $stackGroupCode unique code for stack group
+     * @param array $stackKeys list keys, what identify stack
+     * @return StoreStack
+     */
+    public static function findGroupStack(
+        int $storeId,
+        string $stackGroupCode,
+        array $stackKeys
+    ): StoreStack {
+        $sysName = self::createSysName($stackGroupCode, $stackKeys);
+        return StoreStack::findOne([
+            'store_id' => $storeId,
+            'sys_name' => $sysName
+        ]);
+    }
+
+    /**
+     * create stack
+     * @param int $storeId
+     * @param string $stackGroupCode
+     * @param array $stackKeys
+     * @param string $stackName
+     * @return StoreStack
+     * @throws D3ActiveRecordException
+     * @throws Exception
+     */
+    public static function createGroupStack(
+        int $storeId,
+        string $stackGroupCode,
+        array $stackKeys,
+        string $stackName
+    ): StoreStack {
+        $sysName = self::createSysName($stackGroupCode, $stackKeys);
+        $stack = new StoreStack();
+        $stack->store_id = $storeId;
+        $stack->name = $stackName;
+        $stack->setTypeStandard();
+        $stack->active = 1;
+        $stack->sys_name = $sysName;
+        if (!$stack->save()) {
+            throw new D3ActiveRecordException($stack);
+        }
+        return $stack;
+    }
+
+    /**
+     * @param string $stackGroupCode
+     * @param array $stackKeys
+     * @return string
+     */
+    private static function createSysName(string $stackGroupCode, array $stackKeys): string
+    {
+        return $stackGroupCode . '-' . implode('-', $stackKeys);
     }
 }
