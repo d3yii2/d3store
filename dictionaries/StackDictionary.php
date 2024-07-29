@@ -9,6 +9,9 @@ use Yii;
 use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
+/**
+ * stack dictionary
+ */
 class StackDictionary
 {
     private const CACHE_KEY_LIST = 'StackDictionaryList';
@@ -177,7 +180,7 @@ class StackDictionary
             ->select('company_id')
             ->column() as $companyId) {
             Yii::$app->cache->delete(self::createKeyCompanyStackList($companyId, false));
-            Yii::$app->cache->delete(self::createKeyCompanyStackList($companyId, true));
+            Yii::$app->cache->delete(self::createKeyCompanyStackList($companyId));
         }
     }
 
@@ -205,7 +208,7 @@ class StackDictionary
         int $storeId,
         string $stackGroupCode,
         array $stackKeys
-    ): StoreStack {
+    ): ?StoreStack {
         $sysName = self::createSysName($stackGroupCode, $stackKeys);
         return StoreStack::findOne([
             'store_id' => $storeId,
