@@ -455,17 +455,20 @@ class Transactions
     /**
      * add to store transaction, reducing remain in prev transaction and register  flow
      *
-     * @param StoreTransactions $transaction
-     * @param StoreTransactions $rT
-     * @param float $tranQuantity
+     * @param StoreTransactions $transaction move to this transaction
+     * @param StoreTransactions $rT  move from this to $transaction
+     * @param ?float $tranQuantity move quantity. if no t defined move all remain quantity
      * @throws Exception
      */
     public static function moveTransactionAdd(
         StoreTransactions $transaction,
         StoreTransactions $rT,
-        float $tranQuantity
+        float $tranQuantity = null
     )
     {
+        if ($tranQuantity === null) {
+            $tranQuantity = $rT->remain_quantity;
+        }
         if($tranQuantity < 0){
             throw new Exception('Error: quantity must be positive');
         }
