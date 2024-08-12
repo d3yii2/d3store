@@ -16,6 +16,7 @@ class StackDictionary
 {
     private const CACHE_KEY_LIST = 'StackDictionaryList';
     private const CACHE_KEY_LIST_STACK_NAME = 'StackDictionaryListStName';
+    private const CACHE_KEY_LIST_STORE_NAME = 'StackDictionaryStoreNameList';
 
     public static function getList(int $storeId = 0, bool $full = true): array
     {
@@ -41,6 +42,23 @@ class StackDictionary
                     ->orderBy('store.name, store_stack.name')
                     ->all();
                 return ArrayHelper::map($stocks, 'id', 'name');
+            }
+        );
+    }
+
+    public static function getId2StoreNameList(): array
+    {
+        return Yii::$app->cache->getOrSet(
+            self::CACHE_KEY_LIST_STORE_NAME,
+            static function () {
+                $list = StoreStack::find()
+                    ->select([
+                        'store_stack.id',
+                        'store.name'
+                    ])
+                    ->innerJoin('store_store store', 'store.id = store_stack.store_id')
+                    ->all();
+                return ArrayHelper::map($list, 'id', 'name');
             }
         );
     }
@@ -162,6 +180,7 @@ class StackDictionary
     }
     public static function clearCache(): void
     {
+        Yii::$app->cache->delete(self::CACHE_KEY_LIST_STORE_NAME);
         foreach (StoreStore::find()->all() as $store) {
             Yii::$app->cache->delete(self::createKeyList(0, false));
             Yii::$app->cache->delete(self::createKeyList(0, true));
@@ -214,6 +233,27 @@ class StackDictionary
             'store_id' => $storeId,
             'sys_name' => $sysName
         ]);
+    }
+
+    public static function findGroupStackList(
+        string $stackGroupCode,
+        array $stackKeys
+    ): array {
+        $sysName = self::createSysName($stackGroupCode, $stackKeys);
+        return ArrayHelper::map(
+            StoreStack::find()
+                ->select([
+                    'id',
+                    'name'
+                ])
+                ->where([
+                    'sys_name' => $sysName
+                ])
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
     }
 
     /**
