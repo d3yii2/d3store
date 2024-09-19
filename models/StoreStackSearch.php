@@ -37,23 +37,42 @@ class StoreStackSearch extends StoreStack
      *
      * @return ActiveDataProvider
      */
-    public function search()
+    public function search(): ActiveDataProvider
     {
-        $query = self::find();
-
-
-        
         $this->load(ThRmGridView::getMergedFilterStateParams());
 
         if (!$this->validate()) {
             return new ActiveDataProvider([
-                'query' => $query,
+                'query' => self::find(),
 
             ]);
         }
+        return new ActiveDataProvider([
+            'query' => $this->createQuery(),
+            //'sort' => ['defaultOrder' => ['????' => SORT_ASC]]
+            'pagination' => [
+                'params' => ThRmGridView::getMergedFilterStateParams(),
+            ],
+            'sort' => [
+                'params' => ThRmGridView::getMergedFilterStateParams(),
+            ],
+        ]);
+    }
 
+    public function searchXls(): ActiveDataProvider
+    {
+        return new ActiveDataProvider([
+            'query' => $this->createQuery(),
+            'pagination' => false,
+        ]);
+    }
 
-        $query
+    /**
+     * @return StoreStackQuery
+     */
+    private function createQuery(): StoreStackQuery
+    {
+        return self::find()
             ->andFilterWhere([
                 'store_stack.id' => $this->id,
                 'store_stack.store_id' => $this->store_id,
@@ -63,17 +82,6 @@ class StoreStackSearch extends StoreStack
             ->andFilterWhere(['like', 'store_stack.name', $this->name])
             ->andFilterWhere(['like', 'store_stack.type', $this->type])
             ->andFilterWhere(['like', 'store_stack.product_name', $this->product_name])
-            ->andFilterWhere(['like', 'store_stack.notes', $this->notes])
-;
-        return new ActiveDataProvider([
-            'query' => $query,
-            //'sort' => ['defaultOrder' => ['????' => SORT_ASC]]
-            'pagination' => [
-                'params' => ThRmGridView::getMergedFilterStateParams(),
-            ],
-            'sort' => [
-                'params' => ThRmGridView::getMergedFilterStateParams(),
-            ],
-        ]);
+            ->andFilterWhere(['like', 'store_stack.notes', $this->notes]);
     }
 }
