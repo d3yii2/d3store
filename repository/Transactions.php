@@ -13,7 +13,6 @@ use yii\db\StaleObjectException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\VarDumper;
 
-
 class Transactions
 {
     public static $errors = [];
@@ -37,8 +36,7 @@ class Transactions
         int $refRecordId,
         $addRefId = null,
         $addRefRecordId = null
-    ): StoreTransactions
-    {
+    ): StoreTransactions {
         $transaction = new StoreTransactions();
         $transaction->action = StoreTransactions::ACTION_LOAD;
         $transaction->tran_time = $tranTime->format('Y-m-d H:i:s');
@@ -53,9 +51,7 @@ class Transactions
         if (!$transaction->save()) {
             throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
         }
-
         return $transaction;
-
     }
 
     /**
@@ -75,19 +71,16 @@ class Transactions
         ];
         $tran = StoreTransactions::findOne($searchParam);
 
-        if(!$tran){
+        if (!$tran) {
             throw new Exception('Can not find transactin. ' . VarDumper::dumpAsString($searchParam));
         }
-        if($tran->getStoreWoffs()->one()){
+        if ($tran->getStoreWoffs()->one()) {
             throw new Exception('Can not delete transactin. Transaction has write off');
         }
-
-        if(!$tran->delete()){
+        if (!$tran->delete()) {
             throw new Exception('Can not delete transactin.' . VarDumper::dumpAsString($tran->getErrors()));
         }
-
         return true;
-
     }
 
     /**
@@ -105,19 +98,20 @@ class Transactions
     {
         self::clearError();
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
-        if(round($stackBalance,5) < round($quantity,5)){
-            self::registreError('No enough unload quantity',[
-                'stackBalance' => round($stackBalance,5),
-                'quantity' => round($quantity,5),
-                'stackFromId' => $stackFromId,
-                'loadRefId' => $loadRefId,
-                'loadRefRecordIdList' => $loadRefRecordIdList
-            ]);
+        if (round($stackBalance, 5) < round($quantity, 5)) {
+            self::registreError(
+                'No enough unload quantity',
+                [
+                    'stackBalance' => round($stackBalance, 5),
+                    'quantity' => round($quantity, 5),
+                    'stackFromId' => $stackFromId,
+                    'loadRefId' => $loadRefId,
+                    'loadRefRecordIdList' => $loadRefRecordIdList
+                ]
+            );
             return false;
         }
-
         return self::writeOff('fifo', $loadRefId, $loadRefRecordIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
-
     }
 
     /**
@@ -131,11 +125,17 @@ class Transactions
      * @return StoreTransactions[]
      * @throws Exception
      */
-    public static function unLoadFifoByTranId($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadTranIdList,  $loadRefId = false ): array
-    {
+    public static function unLoadFifoByTranId(
+        $tranTime,
+        $quantity,
+        $stackFromId,
+        $refId,
+        $refRecordId,
+        $loadTranIdList,
+        $loadRefId = false
+    ): array {
         self::clearError();
         return self::writeOffByTran('fifo', $loadRefId, $loadTranIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
-
     }
 
     /**
@@ -153,14 +153,17 @@ class Transactions
     {
         self::clearError();
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
-        if(round($stackBalance,5) < round($quantity,5)){
-            self::registreError('No enough unload quantaty',[
-                'stackBalance' => round($stackBalance,5),
-                'quantity' => round($quantity,5),
-                'stackFromId' => $stackFromId,
-                'loadRefId' => $loadRefId,
-                'loadRefRecordIdList' => $loadRefRecordIdList
-            ]);
+        if (round($stackBalance, 5) < round($quantity, 5)) {
+            self::registreError(
+                'No enough unload quantaty',
+                [
+                    'stackBalance' => round($stackBalance, 5),
+                    'quantity' => round($quantity, 5),
+                    'stackFromId' => $stackFromId,
+                    'loadRefId' => $loadRefId,
+                    'loadRefRecordIdList' => $loadRefRecordIdList
+                ]
+            );
             return false;
         }
         return self::writeOff('lifo', $loadRefId, $loadRefRecordIdList, $tranTime, $quantity, $stackFromId, $refId, $refRecordId);
@@ -187,8 +190,7 @@ class Transactions
         int $addRefRecordId = 0,
         int $loadRefId = 0,
         array $loadRefRecordIdList = []
-    ): array
-    {
+    ): array {
         self::clearError();
 
         /**
@@ -213,7 +215,7 @@ class Transactions
             ->where(['stack_to' => $stackFromId])
             ->andFilterCompare('remain_quantity', 0, '>')
             ->orderBy(['tran_time' => SORT_DESC]);
-        if($loadRefId){
+        if ($loadRefId) {
             $query->andWhere(['ref_id' => $loadRefId])
                 ->andWhere(['ref_record_id' => $loadRefRecordIdList]);
         }
@@ -223,12 +225,11 @@ class Transactions
          * extra sorting for more one level moving
          */
         $SortedRemainTran = [];
-        foreach ($remainTran as $k =>$tran){
-
+        foreach ($remainTran as $k =>$tran) {
             $prevTran = clone $tran;
-            while($prevTran->action !== StoreTransactions::ACTION_LOAD){
+            while ($prevTran->action !== StoreTransactions::ACTION_LOAD) {
                 /** @var StoreTransactionFlow $flow */
-                if(!$flow = $prevTran->getStoreTransactionFlowsNext()->one()){
+                if (!$flow = $prevTran->getStoreTransactionFlowsNext()->one()) {
                     throw new Exception('Ca not found flow for StoreTransactions: ' . VarDumper::dumpAsString($prevTran->attributes()));
                 }
                 if(!$prevTran = $flow->getPrevTran()->one()){
@@ -240,7 +241,6 @@ class Transactions
             $SortedRemainTran[$key] = $tran;
             unset($remainTran[$k]);
         }
-
         ksort($SortedRemainTran);
 
         /**
@@ -249,7 +249,6 @@ class Transactions
         $moveQuantity = $quantity;
         $moveTransactionList = [];
         foreach ($SortedRemainTran as $rT) {
-
             if ($moveQuantity > $rT->remain_quantity) {
                 $moveQuantity -= $rT->remain_quantity;
                 $tranQuantity = $rT->remain_quantity;
@@ -257,7 +256,6 @@ class Transactions
                 $tranQuantity = $moveQuantity;
                 $moveQuantity = 0;
             }
-
             $moveTransactionList[] = self::moveTransaction($tranTime, $stackToId, $rT, $tranQuantity,$addRefId,$addRefRecordId);
 
             if ($moveQuantity < $quantity/1000000000) {
@@ -787,16 +785,17 @@ class Transactions
         }
 
         return $loadTranIdList;
-
     }
 
     /**
      * @param int $refId
-     * @param int $refRecordId
+     * @param int|int[] $refRecordId
      * @return StoreTransactions[]
      */
-    public static  function getLoadTran(int $refId, int $refRecordId): array
-    {
+    public static function getLoadTran(
+        int $refId,
+        $refRecordId
+    ): array {
         return StoreTransactions::findAll([
             'action' => StoreTransactions::ACTION_LOAD,
             'ref_id' => $refId,
@@ -806,11 +805,13 @@ class Transactions
 
     /**
      * @param int $refId
-     * @param int $refRecordId
+     * @param int|int[] $refRecordId
      * @return StoreTransactions[]
      */
-    public static  function getMoveTran(int $refId, int $refRecordId): array
-    {
+    public static function getMoveTran(
+        int $refId,
+        $refRecordId
+    ): array {
         return StoreTransactions::findAll([
             'action' => StoreTransactions::ACTION_MOVE,
             'ref_id' => $refId,
@@ -820,19 +821,20 @@ class Transactions
 
     /**
      * @param int $refId
-     * @param int $refRecordId
+     * @param int|int[] $refRecordId
      * @return StoreTransactions[]
      */
-    public static  function getUnLoadTran(int $refId, int $refRecordId): array
-    {
+    public static function getUnLoadTran(
+        int $refId,
+        $refRecordId
+    ): array {
         return StoreTransactions::find()
             ->select([
                 'ut.*'
             ])
             ->innerJoin('store_woff', 'store_transactions.id = store_woff.load_tran_id')
             ->innerJoin('store_transactions AS ut', 'store_woff.unload_tran_id = ut.id')
-            ->andWhere
-            ([
+            ->andWhere([
                 'store_transactions.action' => [
                     StoreTransactions::ACTION_LOAD,
                     StoreTransactions::ACTION_MOVE,
