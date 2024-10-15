@@ -2,8 +2,10 @@
 
 namespace d3yii2\d3store\dictionaries;
 
+use d3system\exceptions\D3ActiveRecordException;
 use d3yii2\d3store\models\StoreStore;
 use Yii;
+use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
 class StoreDictionary
@@ -68,5 +70,23 @@ class StoreDictionary
         ) {
             Yii::$app->cache->delete(self::createKey($companyId));
         }
+    }
+
+    /**
+     * @throws Exception
+     * @throws D3ActiveRecordException
+     */
+    public static function getStoreIdByName(int $companyId, string $name): int
+    {
+        if ($id =array_search($name,self::getList($companyId),true)) {
+            return $id;
+        }
+        $model = new StoreStore();
+        $model->company_id = $companyId;
+        $model->name = $name;
+        if (!$model->save()) {
+            throw new D3ActiveRecordException($model);
+        }
+        return $model->id;
     }
 }
