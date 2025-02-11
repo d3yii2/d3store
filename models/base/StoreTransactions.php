@@ -4,17 +4,21 @@
 
 namespace d3yii2\d3store\models\base;
 
-use d3yii2\d3store\models\DmMoveDelivery;
-use d3yii2\d3store\models\SftSiftingDelivery;
-use d3yii2\d3store\models\StoreTransactionsQuery;
 use Yii;
+use d3yii2\d3store\models\StoreFixes;
+use d3yii2\d3store\models\StoreRef;
+use d3yii2\d3store\models\StoreStack;
+use d3yii2\d3store\models\StoreTranAdd;
+use d3yii2\d3store\models\StoreTransactionFlow;
+use d3yii2\d3store\models\StoreTransactionsQuery;
+use d3yii2\d3store\models\StoreWoff;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
  * This is the base-model class for table "store_transactions".
  *
- * @property string $id
+ * @property integer $id
  * @property string $action
  * @property string $tran_time
  * @property integer $stack_from
@@ -24,39 +28,36 @@ use yii\db\ActiveRecord;
  * @property integer $ref_id
  * @property integer $ref_record_id
  * @property integer $add_ref_id
- * @property string $add_ref_record_id
+ * @property integer $add_ref_record_id
  *
- * @property DmMoveDelivery[] $dmMoveDeliveries
- * @property SftSiftingDelivery[] $sftSiftingDeliveries
- * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows
- * @property \d3yii2\d3store\models\StoreTransactionFlow[] $storeTransactionFlows0
- * @property \d3yii2\d3store\models\StoreStack $stackFrom
- * @property \d3yii2\d3store\models\StoreStack $stackTo
- * @property \d3yii2\d3store\models\StoreRef $ref
- * @property \d3yii2\d3store\models\StoreWoff[] $storeWoffs
- * @property \d3yii2\d3store\models\StoreWoff[] $storeWoffs0
+ * @property StoreRef $ref
+ * @property StoreStack $stackFrom
+ * @property StoreStack $stackTo
+ * @property StoreFixes[] $storeFixes
+ * @property StoreTranAdd[] $storeTranAdds
+ * @property StoreTransactionFlow[] $storeTransactionFlows
+ * @property StoreTransactionFlow[] $storeTransactionFlows0
+ * @property StoreWoff[] $storeWoffs
+ * @property StoreWoff[] $storeWoffs0
  * @property string $aliasModel
  */
 abstract class StoreTransactions extends ActiveRecord
 {
 
-
-
     /**
-    * ENUM field values
+    * column action ENUM values
     */
     public const ACTION_LOAD = 'Load';
     public const ACTION_UNLOAD = 'Unload';
     public const ACTION_MOVE = 'Move';
-    var $enum_labels = false;
+
     /**
      * @inheritdoc
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'store_transactions';
     }
-
 
     /**
      * @inheritdoc
@@ -64,20 +65,28 @@ abstract class StoreTransactions extends ActiveRecord
     public function rules()
     {
         return [
-            [['action', 'tran_time', 'quantity', 'remain_quantity'], 'required'],
-            [['action'], 'string'],
-            [['tran_time'], 'safe'],
-            [['stack_from', 'stack_to', 'ref_id', 'ref_record_id', 'add_ref_id', 'add_ref_record_id'], 'integer'],
-            [['quantity', 'remain_quantity'], 'number'],
-            [['stack_from'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_from' => 'id']],
-            [['stack_to'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreStack::className(), 'targetAttribute' => ['stack_to' => 'id']],
-            [['ref_id'], 'exist', 'skipOnError' => true, 'targetClass' => \d3yii2\d3store\models\StoreRef::className(), 'targetAttribute' => ['ref_id' => 'id']],
-            ['action', 'in', 'range' => [
+            'required' => [['action', 'tran_time', 'quantity', 'remain_quantity'], 'required'],
+            'enum-action' => ['action', 'in', 'range' => [
                     self::ACTION_LOAD,
                     self::ACTION_UNLOAD,
                     self::ACTION_MOVE,
                 ]
-            ]
+            ],
+            'decimal-signed-13-3' => [
+                ['quantity', 'remain_quantity'],
+                    'number',
+                    'numberPattern' => '/^([\+-]?((\d{1,10})|(\d{0,10}\.\d{0,3})|(\.\d{1,3})))$/',
+                    'message' =>  Yii::t('crud', 'Invalid number format')
+                ],
+            'tinyint Unsigned' => [['ref_id','add_ref_id'],'integer' ,'min' => 0 ,'max' => 255],
+            'smallint Unsigned' => [['stack_from','stack_to'],'integer' ,'min' => 0 ,'max' => 65535],
+            'integer Unsigned' => [['id','ref_record_id','add_ref_record_id'],'integer' ,'min' => 0 ,'max' => 4294967295],
+            [['action'], 'string'],
+            [['tran_time'], 'safe'],
+            [['quantity', 'remain_quantity'], 'number'],
+            [['stack_from'], 'exist', 'skipOnError' => true, 'targetClass' => StoreStack::className(), 'targetAttribute' => ['stack_from' => 'id']],
+            [['stack_to'], 'exist', 'skipOnError' => true, 'targetClass' => StoreStack::className(), 'targetAttribute' => ['stack_to' => 'id']],
+            [['ref_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreRef::className(), 'targetAttribute' => ['ref_id' => 'id']]
         ];
     }
 
@@ -101,37 +110,13 @@ abstract class StoreTransactions extends ActiveRecord
         ];
     }
 
-
     /**
      * @return ActiveQuery
      */
-    public function getStoreTransactionFlowsNext()
+    public function getDmShiftings()
     {
-        return $this->hasMany(\d3yii2\d3store\models\StoreTransactionFlow::className(), ['next_tran_id' => 'id']);
-    }
-
-    /**
-     * @return ActiveQuery
-     */
-    public function getStoreTransactionFlowsPrew()
-    {
-        return $this->hasMany(\d3yii2\d3store\models\StoreTransactionFlow::className(), ['prev_tran_id' => 'id']);
-    }
-
-    /**
-     * @return ActiveQuery
-     */
-    public function getStackFrom()
-    {
-        return $this->hasOne(\d3yii2\d3store\models\StoreStack::className(), ['id' => 'stack_from']);
-    }
-
-    /**
-     * @return ActiveQuery
-     */
-    public function getStackTo()
-    {
-        return $this->hasOne(\d3yii2\d3store\models\StoreStack::className(), ['id' => 'stack_to']);
+        return $this
+            ->hasMany(DmShifting::className(), ['store_transaction_id' => 'id']);
     }
 
     /**
@@ -139,7 +124,62 @@ abstract class StoreTransactions extends ActiveRecord
      */
     public function getRef()
     {
-        return $this->hasOne(\d3yii2\d3store\models\StoreRef::className(), ['id' => 'ref_id']);
+        return $this
+            ->hasOne(StoreRef::className(), ['id' => 'ref_id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStackFrom()
+    {
+        return $this
+            ->hasOne(StoreStack::className(), ['id' => 'stack_from']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStackTo()
+    {
+        return $this
+            ->hasOne(StoreStack::className(), ['id' => 'stack_to']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStoreFixes()
+    {
+        return $this
+            ->hasMany(StoreFixes::className(), ['transaction_id' => 'id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStoreTranAdds()
+    {
+        return $this
+            ->hasMany(StoreTranAdd::className(), ['transactions_id' => 'id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStoreTransactionFlows()
+    {
+        return $this
+            ->hasMany(StoreTransactionFlow::className(), ['next_tran_id' => 'id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getStoreTransactionFlows0()
+    {
+        return $this
+            ->hasMany(StoreTransactionFlow::className(), ['prev_tran_id' => 'id']);
     }
 
     /**
@@ -147,7 +187,8 @@ abstract class StoreTransactions extends ActiveRecord
      */
     public function getStoreWoffs()
     {
-        return $this->hasMany(\d3yii2\d3store\models\StoreWoff::className(), ['load_tran_id' => 'id']);
+        return $this
+            ->hasMany(StoreWoff::className(), ['load_tran_id' => 'id']);
     }
 
     /**
@@ -155,11 +196,10 @@ abstract class StoreTransactions extends ActiveRecord
      */
     public function getStoreWoffs0()
     {
-        return $this->hasMany(\d3yii2\d3store\models\StoreWoff::className(), ['unload_tran_id' => 'id']);
+        return $this
+            ->hasMany(StoreWoff::className(), ['unload_tran_id' => 'id']);
     }
 
-
-    
     /**
      * @inheritdoc
      * @return StoreTransactionsQuery the active query used by this AR class.
@@ -169,31 +209,78 @@ abstract class StoreTransactions extends ActiveRecord
         return new StoreTransactionsQuery(get_called_class());
     }
 
-
     /**
      * get column action enum value label
      * @param string $value
      * @return string
      */
-    public static function getActionValueLabel($value){
-        $labels = self::optsAction();
-        if(isset($labels[$value])){
-            return $labels[$value];
+    public static function getActionValueLabel(string $value): string
+    {
+        if (!$value) {
+            return '';
         }
-        return $value;
+        $labels = self::optsAction();
+        return $labels[$value] ?? $value;
     }
 
     /**
      * column action ENUM value labels
-     * @return array
+     * @return string[]
      */
-    public static function optsAction()
+    public static function optsAction(): array
     {
         return [
-            self::ACTION_LOAD => Yii::t('d3store', self::ACTION_LOAD),
-            self::ACTION_UNLOAD => Yii::t('d3store', self::ACTION_UNLOAD),
-            self::ACTION_MOVE => Yii::t('d3store', self::ACTION_MOVE),
+            self::ACTION_LOAD => Yii::t('d3store', 'Load'),
+            self::ACTION_UNLOAD => Yii::t('d3store', 'Unload'),
+            self::ACTION_MOVE => Yii::t('d3store', 'Move'),
         ];
     }
+    /**
+    * ENUM field values
+    */
+    /**
+     * @return bool
+     */
+    public function isActionLoad(): bool
+    {
+        return $this->action === self::ACTION_LOAD;
+    }
 
+     /**
+     * @return void
+     */
+    public function setActionLoad(): void
+    {
+        $this->action = self::ACTION_LOAD;
+    }
+    /**
+     * @return bool
+     */
+    public function isActionUnload(): bool
+    {
+        return $this->action === self::ACTION_UNLOAD;
+    }
+
+     /**
+     * @return void
+     */
+    public function setActionUnload(): void
+    {
+        $this->action = self::ACTION_UNLOAD;
+    }
+    /**
+     * @return bool
+     */
+    public function isActionMove(): bool
+    {
+        return $this->action === self::ACTION_MOVE;
+    }
+
+     /**
+     * @return void
+     */
+    public function setActionMove(): void
+    {
+        $this->action = self::ACTION_MOVE;
+    }
 }
