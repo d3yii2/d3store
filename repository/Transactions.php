@@ -2,6 +2,7 @@
 
 namespace d3yii2\d3store\repository;
 
+use d3system\exceptions\D3ActiveRecordException;
 use d3yii2\d3store\models\StoreTransactionFlow;
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
@@ -377,19 +378,20 @@ class Transactions
     }
 
 
-
-
     /**
-     * create store transaction, reducing remain in prev transaction and register  flow
+     * create store transaction, reducing remain in prev transaction and create move transaction
      *
-     * @param DateTime $tranTime
-     * @param int $stackToId
-     * @param StoreTransactions $rT
-     * @param float $tranQuantity
-     * @param int $addRefId
-     * @param int $addRefRecordId
+     * @param DateTime $tranTime transaction time
+     * @param int $stackToId move to stack
+     * @param StoreTransactions $rT source transaction
+     * @param float $tranQuantity transaction quantity
+     * @param int $addRefId additional ref object
+     * @param int $addRefRecordId additional ref object record id
+     * @param int|null $refRecordId alternative ref record id, if required other as in $rT->ref_record_d
      * @return StoreTransactions
+     * @throws D3ActiveRecordException
      * @throws Exception
+     * @throws \yii\db\Exception
      */
     public static function moveTransaction(
         DateTime $tranTime,
@@ -397,7 +399,8 @@ class Transactions
         StoreTransactions $rT,
         float $tranQuantity,
         int $addRefId = 0,
-        int $addRefRecordId = 0
+        int $addRefRecordId = 0,
+        int $refRecordId = null
     ): StoreTransactions
     {
         if($tranQuantity < 0){
@@ -413,7 +416,7 @@ class Transactions
         $transaction->stack_from = $rT->stack_to;
         $transaction->stack_to = $stackToId;
         $transaction->ref_id = $rT->ref_id;
-        $transaction->ref_record_id = $rT->ref_record_id;
+        $transaction->ref_record_id = $refRecordId??$rT->ref_record_id;
         if($addRefId) {
             $transaction->add_ref_id = $addRefId;
         }
@@ -423,10 +426,8 @@ class Transactions
         $transaction->quantity = $tranQuantity;
         $transaction->remain_quantity = $tranQuantity;
 
-
-
         if (!$transaction->save()) {
-            throw new Exception('Error:' . VarDumper::dumpAsString($transaction->errors));
+            throw new D3ActiveRecordException($transaction);
         }
 
         /**
@@ -434,7 +435,7 @@ class Transactions
          */
         $rT->remain_quantity -= $tranQuantity;
         if (!$rT->save()) {
-            throw new Exception('Error:' . VarDumper::dumpAsString($rT->errors));
+            throw new D3ActiveRecordException($rT);
         }
 
         /**
@@ -445,7 +446,7 @@ class Transactions
         $flow->next_tran_id = $transaction->id;
         $flow->quantity = $tranQuantity;
         if (!$flow->save()) {
-            throw new Exception('Error:' . VarDumper::dumpAsString($flow->errors));
+            throw new D3ActiveRecordException($flow);
         }
         return $transaction;
     }
