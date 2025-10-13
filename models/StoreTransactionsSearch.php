@@ -17,8 +17,6 @@ use yii\helpers\ArrayHelper;
  */
 class StoreTransactionsSearch extends StoreTransactions
 {
-
-
     public function behaviors(): array
     {
         return D3DateTimeBehavior::getConfig(['tran_time']);
@@ -26,10 +24,12 @@ class StoreTransactionsSearch extends StoreTransactions
 
     public function rules(): array
     {
-        return parent::rules() +
+        return array_merge(
+            parent::rules(),
             [
                 ['tran_time_local', 'safe']
-            ];
+            ]
+        );
     }
 
     /**
@@ -81,18 +81,17 @@ class StoreTransactionsSearch extends StoreTransactions
 
     protected function applyActionFilter(ActiveQuery $query, string $action): ActiveQuery
     {
-        foreach (self::getActionMappingConfig() as $filter) {
+        foreach (static::getActionMappingConfig() as $filter) {
             if ($filter->code !== $action) {
                 continue;
             }
-            return $query->andWhere([
+            return $query->andFilterWhere([
                 'store_transactions.action' => $filter->filterBaseAction,
                 'store_transactions.stack_to' => $filter->filterStackTo,
-                'store_transactions.stack_from' => $filter->filterStackFrom,
+                'store_transactions.stack_from' => $filter->filterStackFrom
             ]);
         }
         return $query->andWhere(['store_transactions.action' => $action]);
-
     }
 
     /**
@@ -101,10 +100,7 @@ class StoreTransactionsSearch extends StoreTransactions
      */
     public function createActionLabel(): string
     {
-        foreach (self::getActionMappingConfig() as $filter) {
-            if ($filter->code !== $this->action) {
-                continue;
-            }
+        foreach (static::getActionMappingConfig() as $filter) {
             if ($filter->filterStackTo && !in_array($this->stack_to, $filter->filterStackTo)) {
                 continue;
             }
@@ -116,7 +112,6 @@ class StoreTransactionsSearch extends StoreTransactions
             if ($filter->filterBaseAction && !in_array($this->action, $filter->filterBaseAction)) {
                 continue;
             }
-
             return $filter->label;
         }
 
@@ -126,21 +121,13 @@ class StoreTransactionsSearch extends StoreTransactions
             );
         }
         return $actionLabel;
-
-    }
-
-    /**
-     * @return ActionFilter[]
-     */
-    public static function getActionMappingConfig(): array
-    {
-        return [];
     }
 
     public static function optsAction(): array
     {
-        return
-            parent::optsAction() +
-            ArrayHelper::map(self::getActionMappingConfig(), 'code', 'label');
+        return array_merge(
+            parent::optsAction(),
+            ArrayHelper::map(static::getActionMappingConfig(), 'code', 'label')
+      );
     }
 }
