@@ -6,6 +6,7 @@ use cewood\cwatlikumi\models\StoreTransactions;
 use d3system\behaviors\D3DateTimeBehavior;
 use d3yii2\d3store\models\Data\ActionFilter;
 use RuntimeException;
+use Yii;
 use yii\base\Model;
 use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
@@ -17,6 +18,8 @@ use yii\helpers\ArrayHelper;
  */
 class StoreTransactionsSearch extends StoreTransactions
 {
+
+    public ?string $storeIds = null;
     public function behaviors(): array
     {
         return D3DateTimeBehavior::getConfig(['tran_time']);
@@ -27,7 +30,17 @@ class StoreTransactionsSearch extends StoreTransactions
         return array_merge(
             parent::rules(),
             [
-                ['tran_time_local', 'safe']
+                [['tran_time_local', 'storeIds'], 'safe']
+            ]
+        );
+    }
+
+    public function attributeLabels(): array
+    {
+        return array_merge(
+            parent::attributeLabels(),
+            [
+                'storeIds' => Yii::t('d3store', 'Stores'),
             ]
         );
     }
@@ -48,7 +61,7 @@ class StoreTransactionsSearch extends StoreTransactions
      */
     public function createQuery(int $refId): ActiveQuery
     {
-        return self::find()
+        $query = self::find()
             ->select([
                 'id' => 'store_transactions.id',
                 'action' => 'store_transactions.action',
@@ -61,22 +74,38 @@ class StoreTransactionsSearch extends StoreTransactions
                 'ref_record_id' => 'store_transactions.ref_record_id',
                 'add_ref_id' => 'store_transactions.add_ref_id',
                 'add_ref_record_id' => 'store_transactions.add_ref_record_id',
+                'storeIds' => 'CONCAT(IFNULL(store_stack_from.store_id,0),"/",IFNULL(store_stack_to.store_id,0))'
             ])
+            ->leftJoin(
+                'store_stack store_stack_from',
+                'store_stack_from.id = store_transactions.stack_from'
+            )
+            ->leftJoin(
+                'store_stack store_stack_to',
+                'store_stack_to.id = store_transactions.stack_to'
+            )
             ->andWhere([
                 'store_transactions.ref_id' => $refId
             ])
             ->andFilterWhere([
                 'store_transactions.id' => $this->id,
-                'store_transactions.stack_from' => $this->stack_from,
-                'store_transactions.stack_to' => $this->stack_to,
                 'store_transactions.quantity' => $this->quantity,
                 'store_transactions.remain_quantity' => $this->remain_quantity,
                 'store_transactions.ref_id' => $this->ref_id,
                 'store_transactions.ref_record_id' => $this->ref_record_id,
                 'store_transactions.add_ref_id' => $this->add_ref_id,
                 'store_transactions.add_ref_record_id' => $this->add_ref_record_id,
+                'store_transactions.stack_from' => $this->stack_from,
+                'store_transactions.stack_to' => $this->stack_to,
             ])
             ->andFilterWhereDateRange('store_transactions.tran_time', $this->tran_time);
+        if ($this->storeIds) {
+            $query->andWhere(
+                'store_stack_from.store_id = :storeId OR store_stack_to.store_id = :storeId',
+                ['storeId' => $this->storeIds]
+            );
+        }
+        return $query;
     }
 
     protected function applyActionFilter(ActiveQuery $query, string $action): ActiveQuery
