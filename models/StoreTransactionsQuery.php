@@ -2,34 +2,14 @@
 
 namespace d3yii2\d3store\models;
 
+use d3system\yii2\db\D3ActiveQuery;
+
 /**
  * This is the ActiveQuery class for [[\d3yii2\d3store\models\StoreTransactions]].
  *
- * @see \d3yii2\d3store\models\StoreTransactions
+ * @see StoreTransactions
  */
-class StoreTransactionsQuery extends \yii\db\ActiveQuery
+class StoreTransactionsQuery extends D3ActiveQuery
 {
-    /*public function active()
-    {
-        $this->andWhere('[[status]]=1');
-        return $this;
-    }*/
 
-    /**
-     * @inheritdoc
-     * @return \d3yii2\d3store\models\StoreTransactions[]|array
-     */
-    public function all($db = null)
-    {
-        return parent::all($db);
-    }
-
-    /**
-     * @inheritdoc
-     * @return \d3yii2\d3store\models\StoreTransactions|array|null
-     */
-    public function one($db = null)
-    {
-        return parent::one($db);
-    }
 }

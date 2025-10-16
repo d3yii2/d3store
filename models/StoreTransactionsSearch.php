@@ -2,9 +2,7 @@
 
 namespace d3yii2\d3store\models;
 
-use cewood\cwatlikumi\models\StoreTransactions;
 use d3system\behaviors\D3DateTimeBehavior;
-use d3yii2\d3store\models\Data\ActionFilter;
 use RuntimeException;
 use Yii;
 use yii\base\Model;
@@ -159,4 +157,11 @@ class StoreTransactionsSearch extends StoreTransactions
             ArrayHelper::map(static::getActionMappingConfig(), 'code', 'label')
       );
     }
+
+    public static function find()
+    {
+        $calledClass = static::class;
+        return $calledClass::find();
+    }
+
 }
