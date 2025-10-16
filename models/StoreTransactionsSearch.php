@@ -3,6 +3,8 @@
 namespace d3yii2\d3store\models;
 
 use d3system\behaviors\D3DateTimeBehavior;
+use DateInterval;
+use DateTime;
 use RuntimeException;
 use Yii;
 use yii\base\Model;
@@ -16,8 +18,11 @@ use yii\helpers\ArrayHelper;
  */
 class StoreTransactionsSearch extends StoreTransactions
 {
-
     public ?string $storeIds = null;
+
+    /** @var bool */
+    private ?bool $_isLoadedAttributes = null;
+
     public function behaviors(): array
     {
         return D3DateTimeBehavior::getConfig(['tran_time']);
@@ -28,7 +33,7 @@ class StoreTransactionsSearch extends StoreTransactions
         return array_merge(
             parent::rules(),
             [
-                [['tran_time_local', 'storeIds'], 'safe']
+                [['tran_time_local', 'storeIds', 'tran_time_local',], 'safe']
             ]
         );
     }
@@ -39,6 +44,7 @@ class StoreTransactionsSearch extends StoreTransactions
             parent::attributeLabels(),
             [
                 'storeIds' => Yii::t('d3store', 'Stores'),
+                'tran_time' => Yii::t('d3store', 'Time'),
             ]
         );
     }
@@ -155,7 +161,7 @@ class StoreTransactionsSearch extends StoreTransactions
         return array_merge(
             parent::optsAction(),
             ArrayHelper::map(static::getActionMappingConfig(), 'code', 'label')
-      );
+        );
     }
 
     public static function find()
@@ -164,4 +170,29 @@ class StoreTransactionsSearch extends StoreTransactions
         return $calledClass::find();
     }
 
+    protected function isLoadedAttributes(): bool
+    {
+        if ($this->_isLoadedAttributes !== null) {
+            return $this->_isLoadedAttributes;
+        }
+        foreach ($this->attributes as $value) {
+            if ($value === null) {
+                continue;
+            }
+            if ($value === '1970-01-01') {
+                continue;
+            }
+            return $this->_isLoadedAttributes = true;
+        }
+
+        return $this->_isLoadedAttributes = false;
+    }
+
+    protected function setDefaultSortValue(): void
+    {
+        $nowDate = (new DateTime());
+        $prevDates = (new DateTime())->sub(new DateInterval('P29D'));
+        $this->tran_time = $prevDates->format('Y-m-d') . ' - ' . $nowDate->format('Y-m-d');
+        $this->tran_time_local = $prevDates->format('d.m.Y') . ' - ' . $nowDate->format('d.m.Y');
+    }
 }
