@@ -294,4 +294,24 @@ class StackDictionary
     {
         return $stackGroupCode . '-' . implode('-', $stackKeys);
     }
+
+    /**
+     * @throws Exception
+     * @throws D3ActiveRecordException
+     */
+    public static function getOrCreateId(int $storeId, string $name): int
+    {
+        if (false !== ($id = array_search($name, self::getStackNameList($storeId), true))) {
+            return $id;
+        }
+        $stack = new StoreStack();
+        $stack->store_id = $storeId;
+        $stack->name = $name;
+        $stack->type = StoreStack::TYPE_STANDARD;
+        $stack->active = 1;
+        if (!$stack->save()) {
+            throw new D3ActiveRecordException($stack);
+        }
+        return $stack->id;
+    }
 }
