@@ -35,8 +35,8 @@ class Transactions
         int $stackToId,
         int $refId,
         int $refRecordId,
-        $addRefId = null,
-        $addRefRecordId = null
+        int $addRefId = null,
+        int $addRefRecordId = null
     ): StoreTransactions {
         $transaction = new StoreTransactions();
         $transaction->action = StoreTransactions::ACTION_LOAD;
