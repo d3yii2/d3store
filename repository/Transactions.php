@@ -92,10 +92,10 @@ class Transactions
      * @param int $refRecordId
      * @param int|bool $loadRefId
      * @param array $loadRefRecordIdList
-     * @return StoreTransactions|bool
+     * @return bool|Transactions[]
      * @throws \Exception
      */
-    public static function unLoadFifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, $loadRefRecordIdList = [])
+    public static function unLoadFifo($tranTime, $quantity, $stackFromId, $refId, $refRecordId, $loadRefId = false, array $loadRefRecordIdList = [])
     {
         self::clearError();
         $stackBalance = self::getStackBalance($stackFromId, $loadRefId, $loadRefRecordIdList);
@@ -508,7 +508,7 @@ class Transactions
      * @param int $stackFromId
      * @param int $refId
      * @param int $refRecordId
-     * @return bool|Transactions[]
+     * @return Transactions[]
      * @throws \Exception
      */
     public static function writeOff(
@@ -551,6 +551,7 @@ class Transactions
             }
 
             $transaction = self::writeOffTran($tranTime, $tranQuantity, $stackFromId, $refId, $refRecordId, $rT);
+            $transactionList[] = $transaction;
             if ($woffQuantity < $transaction->quantity/1000000000) {
                 break;
             }
@@ -883,8 +884,10 @@ class Transactions
         }
         if (!$prevTran->save()) {
             throw new Exception('Can not update prev tran: '
-                . VarDumper::dumpAsString($moveTran->getAttributes()
-                    . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())));
+                . VarDumper::dumpAsString($moveTran->getAttributes()) . PHP_EOL
+                . ' Error:' . VarDumper::dumpAsString($prevTran->getErrors())
+            );
+
         }
         foreach($tranFlowList as $tranFlow) {
             $tranFlow->delete();

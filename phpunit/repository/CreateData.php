@@ -12,8 +12,10 @@ namespace d3yii2\d3store\phpunit\repository;
 use d3yii2\d3store\models\StoreRef;
 use d3yii2\d3store\models\StoreStack;
 use d3yii2\d3store\models\StoreStore;
+use d3yii2\d3store\models\StoreTransactionFlow;
 use d3yii2\d3store\models\StoreTransactions;
 use d3yii2\d3store\models\StoreWoff;
+use yii\db\StaleObjectException;
 
 class CreateData
 {
@@ -56,6 +58,10 @@ class CreateData
         self::$refUnLoadId = $ref->id;
     }
 
+    /**
+     * @throws \Throwable
+     * @throws StaleObjectException
+     */
     public static function clear()
     {
 
@@ -64,6 +70,15 @@ class CreateData
 
             foreach (StoreStack::findAll(['store_id' => $store->id]) as $stack) {
                 foreach (StoreTransactions::findAll(['stack_from' => $stack->id]) as $tran) {
+                    foreach (StoreTransactionFlow::findAll(['prev_tran_id' => $tran->id]) as $f) {
+                        $f->delete();
+                    }
+                    foreach (StoreTransactionFlow::findAll(['next_tran_id' => $tran->id]) as $f) {
+                        $f->delete();
+                    }
+                    foreach (StoreWoff::findAll(['unload_tran_id' => $tran->id]) as $woff) {
+                        $woff->delete();
+                    }
                     foreach (StoreWoff::findAll(['load_tran_id' => $tran->id]) as $woff) {
                         $woff->delete();
                     }

@@ -5,6 +5,8 @@
 namespace d3yii2\d3store\models\base;
 
 use Yii;
+use d3system\yii2\validators\D3TrimValidator;
+use d3yii2\d3store\models\StoreTranAddType;
 use d3yii2\d3store\models\StoreTransactions;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -19,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property float $remain_quantity
  *
  * @property StoreTransactions $transactions
+ * @property StoreTranAddType $type
  * @property string $aliasModel
  */
 abstract class StoreTranAdd extends ActiveRecord
@@ -38,17 +41,26 @@ abstract class StoreTranAdd extends ActiveRecord
     public function rules(): array
     {
         return [
+            'trimNumbers' => [['id','transactions_id','type_id','quantity','remain_quantity'],D3TrimValidator::class, 'trimOnlyStringValues' => true],
             'required' => [['transactions_id', 'type_id', 'quantity', 'remain_quantity'], 'required'],
             'decimal-signed-13-3' => [
                 ['quantity', 'remain_quantity'],
                     'number',
                     'numberPattern' => '/^([\+-]?((\d{1,10})|(\d{0,10}\.\d{0,3})|(\.\d{1,3})))$/',
-                    'message' =>  Yii::t('crud', 'Invalid number format')
+                    'message' =>  Yii::t(
+                        'crud',
+                        'The number format is invalid. Ensure it has at most {integers} digits with up to {decimals} decimal places.',
+                        [
+                            'integers' => 10,
+                            'decimals' => 3
+                        ]
+                    )
                 ],
             'tinyint Unsigned' => [['type_id'],'integer' ,'min' => 0 ,'max' => 255],
             'integer Unsigned' => [['id','transactions_id'],'integer' ,'min' => 0 ,'max' => 4294967295],
             [['quantity', 'remain_quantity'], 'number'],
-            [['transactions_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreTransactions::className(), 'targetAttribute' => ['transactions_id' => 'id']]
+            [['transactions_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreTransactions::class, 'targetAttribute' => ['transactions_id' => 'id']],
+            [['type_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreTranAddType::class, 'targetAttribute' => ['type_id' => 'id']]
         ];
     }
 
@@ -72,7 +84,16 @@ abstract class StoreTranAdd extends ActiveRecord
     public function getTransactions(): ActiveQuery
     {
         return $this
-            ->hasOne(StoreTransactions::className(), ['id' => 'transactions_id']);
+            ->hasOne(StoreTransactions::class, ['id' => 'transactions_id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getType(): ActiveQuery
+    {
+        return $this
+            ->hasOne(StoreTranAddType::class, ['id' => 'type_id']);
     }
 
 }

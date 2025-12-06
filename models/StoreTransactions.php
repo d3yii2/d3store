@@ -3,6 +3,7 @@
 namespace d3yii2\d3store\models;
 
 use d3system\exceptions\D3ActiveRecordException;
+use d3yii2\d3store\dictionaries\StoreTranAddTypeDictionary;
 use d3yii2\d3store\models\base\StoreTransactions as BaseStoreTransactions;
 use d3yii2\d3store\repository\Transactions;
 use DateTime;
@@ -69,6 +70,27 @@ class StoreTransactions extends BaseStoreTransactions
     {
         $tranAdd = new StoreTranAdd([
             'type_id' => $typeId,
+            'transactions_id' => $this->id,
+            'quantity' => $qnt,
+            'remain_quantity' => $qnt,
+        ]);
+        if (!$tranAdd->save()) {
+            throw new D3ActiveRecordException($tranAdd);
+        }
+        return $tranAdd;
+    }
+
+
+    /**
+     * save alternative quantity
+     * @throws Exception
+     * @throws D3ActiveRecordException
+     * @throws \Exception
+     */
+    public function createTranAddByCode(string $code, float $qnt): StoreTranAdd
+    {
+        $tranAdd = new StoreTranAdd([
+            'type_id' => StoreTranAddTypeDictionary::getIdByCode($code),
             'transactions_id' => $this->id,
             'quantity' => $qnt,
             'remain_quantity' => $qnt,
