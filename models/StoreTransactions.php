@@ -87,13 +87,20 @@ class StoreTransactions extends BaseStoreTransactions
      * @throws D3ActiveRecordException
      * @throws \Exception
      */
-    public function createTranAddByCode(string $code, float $qnt): StoreTranAdd
+    public function createTranAddByCode(
+        string $code,
+        float $qnt,
+        ?float $remainQnt = null,
+        ?int $refRecordId = null
+
+    ): StoreTranAdd
     {
         $tranAdd = new StoreTranAdd([
             'type_id' => StoreTranAddTypeDictionary::getIdByCode($code),
             'transactions_id' => $this->id,
             'quantity' => $qnt,
-            'remain_quantity' => $qnt,
+            'remain_quantity' => $remainQnt ?? $qnt,
+            'ref_record_id' => $refRecordId
         ]);
         if (!$tranAdd->save()) {
             throw new D3ActiveRecordException($tranAdd);

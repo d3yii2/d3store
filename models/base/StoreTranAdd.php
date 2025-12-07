@@ -19,6 +19,7 @@ use yii\db\ActiveRecord;
  * @property integer $type_id
  * @property float $quantity
  * @property float $remain_quantity
+ * @property string $ref_record_id
  *
  * @property StoreTransactions $transactions
  * @property StoreTranAddType $type
@@ -41,7 +42,7 @@ abstract class StoreTranAdd extends ActiveRecord
     public function rules(): array
     {
         return [
-            'trimNumbers' => [['id','transactions_id','type_id','quantity','remain_quantity'],D3TrimValidator::class, 'trimOnlyStringValues' => true],
+            'trimNumbers' => [['id','transactions_id','type_id','quantity','remain_quantity','ref_record_id'],D3TrimValidator::class, 'trimOnlyStringValues' => true],
             'required' => [['transactions_id', 'type_id', 'quantity', 'remain_quantity'], 'required'],
             'decimal-signed-13-3' => [
                 ['quantity', 'remain_quantity'],
@@ -58,6 +59,8 @@ abstract class StoreTranAdd extends ActiveRecord
                 ],
             'tinyint Unsigned' => [['type_id'],'integer' ,'min' => 0 ,'max' => 255],
             'integer Unsigned' => [['id','transactions_id'],'integer' ,'min' => 0 ,'max' => 4294967295],
+            'bigint Unsigned' => [['ref_record_id'],'integer' ,'min' => 0 ,'max' => 1.844674407371E+19],
+            [['ref_record_id'], 'default', 'value' => null],
             [['quantity', 'remain_quantity'], 'number'],
             [['transactions_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreTransactions::class, 'targetAttribute' => ['transactions_id' => 'id']],
             [['type_id'], 'exist', 'skipOnError' => true, 'targetClass' => StoreTranAddType::class, 'targetAttribute' => ['type_id' => 'id']]
@@ -75,6 +78,7 @@ abstract class StoreTranAdd extends ActiveRecord
             'type_id' => 'Type ID',
             'quantity' => 'Quantity',
             'remain_quantity' => 'Remain Quantity',
+            'ref_record_id' => 'Ref Record ID',
         ];
     }
 

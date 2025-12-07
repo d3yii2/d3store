@@ -4,6 +4,7 @@
 
 namespace d3yii2\d3store\models\base;
 
+use Yii;
 use d3system\yii2\validators\D3TrimValidator;
 use d3yii2\d3store\models\StoreTranAdd;
 use yii\db\ActiveQuery;
@@ -36,11 +37,10 @@ abstract class StoreTranAddType extends ActiveRecord
     public function rules(): array
     {
         return [
-            'trimNumbers' => [['id'], D3TrimValidator::class, 'trimOnlyStringValues' => true],
+            'trimNumbers' => [['id'],D3TrimValidator::class, 'trimOnlyStringValues' => true],
             'required' => [['name', 'code'], 'required'],
-            'tinyint Unsigned' => [['id'], 'integer', 'min' => 0, 'max' => 255],
-            [['name'], 'string', 'max' => 30],
-            [['code'], 'string', 'max' => 5]
+            'tinyint Unsigned' => [['id'],'integer' ,'min' => 0 ,'max' => 255],
+            [['name', 'code'], 'string', 'max' => 30]
         ];
     }
 

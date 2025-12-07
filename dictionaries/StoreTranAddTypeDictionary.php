@@ -72,7 +72,7 @@ class StoreTranAddTypeDictionary
                         StoreTranAddType::find()
                             ->select([
                                 'id' => '`store_tran_add_type`.`id`',
-                                'name' => '`store_tran_add_type`.`code`',
+                                'code' => '`store_tran_add_type`.`code`',
                             ])
                             ->orderBy([
                                 '`store_tran_add_type`.`code`' => SORT_ASC,

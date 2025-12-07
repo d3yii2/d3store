@@ -9,7 +9,7 @@ class m251206_110005_d3yii2_d3store_create_tran_add_type  extends Migration {
             CREATE TABLE `store_tran_add_type` (
               `id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
               `name` VARCHAR (30) CHARSET utf8mb3 NOT NULL COMMENT \'Add type name\',
-              `code` CHAR(5) NOT NULL COMMENT \'Add type code\',
+              `code` VARCHAR(30) NOT NULL COMMENT \'Add type code\',
               PRIMARY KEY (`id`)
             );
         ');

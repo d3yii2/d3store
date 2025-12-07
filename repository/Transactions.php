@@ -73,13 +73,18 @@ class Transactions
         $tran = StoreTransactions::findOne($searchParam);
 
         if (!$tran) {
-            throw new Exception('Can not find transactin. ' . VarDumper::dumpAsString($searchParam));
+            throw new Exception('Can not find transaction. ' . VarDumper::dumpAsString($searchParam));
         }
         if ($tran->getStoreWoffs()->one()) {
-            throw new Exception('Can not delete transactin. Transaction has write off');
+            throw new Exception('Can not delete transaction. Transaction has write off');
+        }
+        foreach ($tran->storeTranAdds as $add) {
+            if (!$add->delete()) {
+                throw new Exception('Can not delete transaction add.' . VarDumper::dumpAsString($add->getErrors()));
+            }
         }
         if (!$tran->delete()) {
-            throw new Exception('Can not delete transactin.' . VarDumper::dumpAsString($tran->getErrors()));
+            throw new Exception('Can not delete transaction.' . VarDumper::dumpAsString($tran->getErrors()));
         }
         return true;
     }
@@ -892,7 +897,11 @@ class Transactions
         foreach($tranFlowList as $tranFlow) {
             $tranFlow->delete();
         }
-
+        foreach ($moveTran->storeTranAdds as $add) {
+            if (!$add->delete()) {
+                throw new Exception('Can not delete transaction add.' . VarDumper::dumpAsString($add->getErrors()));
+            }
+        }
         $moveTran->delete();
         return $prevTran;
     }
@@ -921,11 +930,14 @@ class Transactions
             }
             $loadTran->remain_quantity += (float)$woff->quantity;
             if (!$loadTran->save()) {
-                throw new Exception('Can not update prev tran: '
-                    . VarDumper::dumpAsString($woffTran->getAttributes()
-                        . ' Error:' . VarDumper::dumpAsString($loadTran->getErrors())));
+                throw new D3ActiveRecordException($loadTran);
             }
             $loadTranList[] = $loadTran;
+            foreach($loadTran->storeTranAdds as $add) {
+                if (!$add->delete()) {
+                    throw new Exception('Can not delete transaction add.' . VarDumper::dumpAsString($add->getErrors()));
+                }
+            }
             $woff->delete();
         }
 
