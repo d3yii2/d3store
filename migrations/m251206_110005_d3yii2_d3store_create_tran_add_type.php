@@ -16,7 +16,7 @@ class m251206_110005_d3yii2_d3store_create_tran_add_type  extends Migration {
 
         $this->execute('
             INSERT INTO store_tran_add_type
-            SELECT 
+            SELECT DISTINCT
               type_id,
               type_id,
               type_id 
