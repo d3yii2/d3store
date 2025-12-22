@@ -52,5 +52,6 @@ class StoreTranAddType extends BaseStoreTranAddType
                 throw new D3ActiveRecordException($model);
             }
         }
+        StoreTranAddTypeDictionary::clearCache();
     }
 }
