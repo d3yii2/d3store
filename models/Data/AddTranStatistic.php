@@ -64,9 +64,9 @@ class AddTranStatistic extends Model
         if ($addUsers) {
             $subQuery
                 ->addSelect([
-                    'user_id' => 'tAdd.user_id'
+                    'user_id' => 'tAdd.ref_record_id'
                 ])
-                ->addGroupBy('tAdd.user_id');
+                ->addGroupBy('tAdd.ref_record_id');
         }
 
         $query = (new Query())
