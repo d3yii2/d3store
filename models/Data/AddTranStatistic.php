@@ -34,7 +34,11 @@ class AddTranStatistic extends Model
         ];
     }
 
-    public static function findForDay(DateTime $date, bool $addUsers = false): array
+    public static function findForDay(
+        DateTime $date,
+        ?int $refId = null,
+        bool $addUsers = false
+    ): array
     {
         $dateFrom = (clone $date)->setTime(0, 0);
         $dateTo = (clone $date)->setTime(23, 59, 59);
