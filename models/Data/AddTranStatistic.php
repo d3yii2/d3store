@@ -42,16 +42,22 @@ class AddTranStatistic extends Model
     {
         $dateFrom = (clone $date)->setTime(0, 0);
         $dateTo = (clone $date)->setTime(23, 59, 59);
-        return self::find($dateFrom, $dateTo, $addUsers);
+        return self::find($dateFrom, $dateTo, $refId, $addUsers);
     }
 
     /**
      * @param DateTime $dateFrom
      * @param DateTime $dateTo
+     * @param int|null $refId
      * @param bool $addUsers
      * @return AddTranStatistic[]
      */
-    private static function find(DateTime $dateFrom, DateTime $dateTo, bool $addUsers = false): array
+    private static function find(
+        DateTime $dateFrom,
+        DateTime $dateTo,
+        ?int $refId = null,
+        bool $addUsers = false
+    ): array
     {
         $subQuery = (new Query())
             ->select([
@@ -63,7 +69,13 @@ class AddTranStatistic extends Model
                 ['tAdd' => 'store_tran_add'],
                 't.id = tAdd.transactions_id'
             )
-            ->where(['between', 't.tran_time', $dateFrom->format('Y-m-d H:i:s'), $dateTo->format('Y-m-d H:i:s')])
+            ->where([
+                'between',
+                't.tran_time',
+                $dateFrom->format('Y-m-d H:i:s'),
+                $dateTo->format('Y-m-d H:i:s')]
+            )
+            ->andFilterWhere(['t.ref_id' => $refId])
             ->groupBy('tAdd.type_id');
         if ($addUsers) {
             $subQuery
