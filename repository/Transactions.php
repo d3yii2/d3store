@@ -716,11 +716,11 @@ class Transactions
 
     /**
      * @param int $stackId
-     * @param int|bool $loadRefId
+     * @param int|null $loadRefId
      * @param array $loadRefRecordIdList
      * @return float
      */
-    public static function getStackBalance($stackId, $loadRefId = false, $loadRefRecordIdList = []): float
+    public static function getStackBalance(int $stackId, ?int $loadRefId = null, array $loadRefRecordIdList = []): float
     {
         $query = StoreTransactions::find()
             ->where(['stack_to' => $stackId]);
@@ -728,7 +728,7 @@ class Transactions
             $query->andWhere(['ref_id' => $loadRefId])
                 ->andWhere(['ref_record_id' => $loadRefRecordIdList]);
         }
-        return $query->sum('remain_quantity');
+        return $query->sum('remain_quantity')??0.;
     }
 
     /**
