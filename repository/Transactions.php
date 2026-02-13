@@ -940,7 +940,11 @@ class Transactions
             }
             $woff->delete();
         }
-
+        foreach ($woffTran->storeTranAdds as $add) {
+            if (!$add->delete()) {
+                throw new Exception('Can not delete transaction add.' . VarDumper::dumpAsString($add->getErrors()));
+            }
+        }
         $woffTran->delete();
         return $loadTranList;
     }
