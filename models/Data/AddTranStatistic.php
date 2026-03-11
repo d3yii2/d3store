@@ -15,13 +15,14 @@ class AddTranStatistic extends Model
      */
     public ?string $addTypeName = null;
     public ?string $userName = null;
+    public ?string $hour = null;
     public ?int $cnt = null;
 
     public function rules(): array
     {
         return [
             [['addTypeName', 'userName'], 'string'],
-            [['cnt'], 'integer'],
+            [['cnt','hour'], 'integer'],
         ];
     }
 
@@ -31,18 +32,26 @@ class AddTranStatistic extends Model
             'addTypeName' => Yii::t('d3store', 'Action'),
             'cnt' => Yii::t('d3store', 'Count'),
             'userName' => Yii::t('d3store', 'User'),
+            'hour' => 'Stunda',
         ];
     }
 
     public static function findForDay(
         DateTime $date,
         ?int $refId = null,
-        bool $addUsers = false
+        bool $addUsers = false,
+        bool $addHours = false
     ): array
     {
         $dateFrom = (clone $date)->setTime(0, 0);
         $dateTo = (clone $date)->setTime(23, 59, 59);
-        return self::find($dateFrom, $dateTo, $refId, $addUsers);
+        return self::find(
+            $dateFrom,
+            $dateTo,
+            $refId,
+            $addUsers,
+            $addHours
+        );
     }
 
     /**
@@ -56,7 +65,8 @@ class AddTranStatistic extends Model
         DateTime $dateFrom,
         DateTime $dateTo,
         ?int $refId = null,
-        bool $addUsers = false
+        bool $addUsers = false,
+        bool $addHours = false
     ): array
     {
         $subQuery = (new Query())
@@ -84,7 +94,13 @@ class AddTranStatistic extends Model
                 ])
                 ->addGroupBy('tAdd.ref_record_id');
         }
-
+        if ($addHours) {
+            $subQuery
+                ->addSelect([
+                    '`hour`' => 'HOUR(t.tran_time)'
+                ])
+                ->addGroupBy('`hour`');
+        }
         $query = (new Query())
             ->select([
                 'addTypeName' => "CASE `t`.`type_id` WHEN 0 THEN '" . Yii::t(
@@ -107,6 +123,15 @@ class AddTranStatistic extends Model
                     'user',
                     'user.id = t.user_id'
                 );
+        }
+        if ($addHours) {
+            $query->addSelect([
+                't.`hour`'
+            ])
+            //->addGroupBy('`hour`')
+            ->addOrderBy([
+                '`hour`' => SORT_ASC,
+            ]);
         }
         $models = [];
         foreach ($query->all() as $row) {
