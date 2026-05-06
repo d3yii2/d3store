@@ -44,4 +44,5 @@ return [
     'Stack name' => 'Stack name',
     'Next transaction' => 'Next transaction',
     'Undefined' => 'Nedefinētas',
+    'Stack is used and cannot be deleted' => 'Aile tiek izmantota un to nevar dzēst',
 ];

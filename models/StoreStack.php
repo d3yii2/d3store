@@ -4,23 +4,35 @@ namespace d3yii2\d3store\models;
 
 use d3yii2\d3store\dictionaries\StackDictionary;
 use d3yii2\d3store\dictionaries\StoreDictionary;
-use \d3yii2\d3store\models\base\StoreStack as BaseStoreStack;
+use d3yii2\d3store\models\base\StoreStack as BaseStoreStack;
 use DateInterval;
 use DateTime;
+use Yii;
+use yii\base\UserException;
 
 /**
  * This is the model class for table "store_stack".
  */
 class StoreStack extends BaseStoreStack
 {
-    public function afterSave($insert, $changedAttributes)
+    public function afterSave($insert, $changedAttributes): void
     {
         parent::afterSave($insert, $changedAttributes);
         StackDictionary::clearCache();
         StoreDictionary::clearCache();
     }
 
-    public function afterDelete()
+    public function delete(): void
+    {
+        if (StoreTransactions::find()->where(['stack_to' => $this->id])->exists()
+            || StoreTransactions::find()->where(['stack_from' => $this->id])->exists()
+        ) {
+            throw new UserException(Yii::t('d3store', 'Stack is used and cannot be deleted'));
+        }
+        parent::delete();
+    }
+
+    public function afterDelete(): void
     {
         parent::afterDelete();
         StackDictionary::clearCache();
