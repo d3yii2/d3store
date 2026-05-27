@@ -2,7 +2,8 @@
 
 namespace d3yii2\d3store\dictionaries;
 
-use d3system\exceptions\D3ActiveRecordException;
+
+use d3system\exceptions\D3ActiveRecordException2;
 use d3yii2\d3store\models\StoreStack;
 use d3yii2\d3store\models\StoreStore;
 use Yii;
@@ -18,6 +19,10 @@ class StackDictionary
     private const CACHE_KEY_LIST_STACK_NAME = 'StackDictionaryListStName';
     private const CACHE_KEY_LIST_STORE_NAME = 'StackDictionaryStoreNameList';
 
+    public static function getActiveList(int $storeId = 0): array
+    {
+        return self::getList($storeId, false);
+    }
     public static function getList(int $storeId = 0, bool $full = true): array
     {
         return Yii::$app->cache->getOrSet(
@@ -263,7 +268,7 @@ class StackDictionary
      * @param array $stackKeys
      * @param string $stackName
      * @return StoreStack
-     * @throws D3ActiveRecordException
+     * @throws D3ActiveRecordException2
      * @throws Exception
      */
     public static function createGroupStack(
@@ -280,7 +285,7 @@ class StackDictionary
         $stack->active = 1;
         $stack->sys_name = $sysName;
         if (!$stack->save()) {
-            throw new D3ActiveRecordException($stack);
+            throw new D3ActiveRecordException2($stack);
         }
         return $stack;
     }
@@ -297,7 +302,7 @@ class StackDictionary
 
     /**
      * @throws Exception
-     * @throws D3ActiveRecordException
+     * @throws D3ActiveRecordException2
      */
     public static function getOrCreateId(int $storeId, string $name): int
     {
@@ -310,7 +315,7 @@ class StackDictionary
         $stack->type = StoreStack::TYPE_STANDARD;
         $stack->active = 1;
         if (!$stack->save()) {
-            throw new D3ActiveRecordException($stack);
+            throw new D3ActiveRecordException2($stack);
         }
         return $stack->id;
     }
