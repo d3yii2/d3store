@@ -10,6 +10,7 @@ use DateTime;
 use Throwable;
 use Yii;
 use yii\base\Exception;
+use yii\base\UserException;
 use yii\db\StaleObjectException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\VarDumper;
@@ -878,6 +879,11 @@ class Transactions
      */
     public static function deleteMoveTransactionByTran(StoreTransactions $moveTran): StoreTransactions
     {
+        if (StoreTransactionFlow::find()->where(['prev_tran_id' => $moveTran->id])->exists()) {
+            throw new UserException(
+                'Cannot delete the transfer because it already has subsequent warehouse operations. You must cancel the subsequent operations first.'
+            );
+        }
         if (!$tranFlowList = StoreTransactionFlow::findAll(['next_tran_id' => $moveTran->id])) {
             throw new Exception('Can not found StoreTransactionFlow for move tran: ' . VarDumper::dumpAsString($moveTran->getAttributes()));
         }
