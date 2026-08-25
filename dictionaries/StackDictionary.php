@@ -136,7 +136,7 @@ class StackDictionary
         if (!$companyId) {
             $companyId = 0;
         }
-        return 'StoreCompanyStackList' . $companyId . '-' . $full;
+        return 'StoreCompanyStackList-' . $companyId . '-' . ($full?'TRUE':'FALSE');
     }
 
     public static function getCompanyList(array $storesIdList, bool $full = true): array
