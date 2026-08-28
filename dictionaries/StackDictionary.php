@@ -199,6 +199,8 @@ class StackDictionary
         foreach (self::getCompanyKeyList() as $key) {
             Yii::$app->cache->delete($key);
         }
+        Yii::$app->cache->delete(self::createKeyCompanyStackList(null, false));
+        Yii::$app->cache->delete(self::createKeyCompanyStackList(null));
         foreach (StoreStore::find()
             ->distinct()
             ->select('company_id')
